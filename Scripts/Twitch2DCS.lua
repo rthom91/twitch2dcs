@@ -175,9 +175,11 @@ local status, err = pcall(function()
 
 	function TwitchClient.onUserPart(cmd)
 		client:removeViewer(cmd.user)
+		
 		if not config:getShowJoinPartMessages() then
 			return
 		end
+		
 		client.ui:addMessage(client:getTimeStamp().." "..cmd.user.." left.", client:getTimeStamp().." "..cmd.user.." left.", client.joinPartSkin, client.joinPartSkin)
 	end
 
@@ -309,5 +311,5 @@ end)
 
 if err ~= nil then
 	net.log("Twitch2DCS failed to load - "..err)
-	MsgWindow.warning(err, "Twitch2DCS Failure"):show()
+	MsgWindow.warning(err, "Twitch2DCS"):show()
 end

@@ -1,33 +1,32 @@
 local base = _G
 
-module("twitch.ui")
+module('twitch.ui')
 
-local require       = base.require
-local table         = base.table
-local string        = base.string
-local math          = base.math
-local assert        = base.assert
-local pairs         = base.pairs
-local ipairs        = base.ipairs
+local require = base.require
+local table = base.table
+local string = base.string
+local math = base.math
+local assert = base.assert
+local pairs = base.pairs
+local ipairs = base.ipairs
 
-local lfs           = require('lfs')
-local os            = require('os')
-local net           = require('net')
-local DCS           = require("DCS") 
-local U             = require('me_utilities')
-local Skin			= require('Skin')
-local SkinUtils     = require('SkinUtils')
-local Gui           = require('dxgui')
-local DialogLoader  = require('DialogLoader')
-local EditBox       = require('EditBox')
-local ListBoxItem   = require('ListBoxItem')
-local Tools 		= require('tools')
-local MulChat 		= require('mul_chat')
-local tracer        = require("twitch.tracer")
-local Config        = require("twitch.config")
-local utils         = require('twitch.utils')
+local lfs = require('lfs')
+local os = require('os')
+local net = require('net')
+local DCS = require('DCS') 
+local U = require('me_utilities')
+local Skin = require('Skin')
+local SkinUtils = require('SkinUtils')
+local Gui = require('dxgui')
+local DialogLoader = require('DialogLoader')
+local EditBox = require('EditBox')
+local ListBoxItem = require('ListBoxItem')
+local Tools = require('tools')
+local MulChat = require('mul_chat')
+local tracer = require('twitch.tracer')
+local Config = require('twitch.config')
 local UpdateManager = require('UpdateManager')
-local Input         = require('Input')
+local Input = require('Input')
 
 local modes = {
 	hidden = "hidden",
@@ -76,7 +75,7 @@ function UI:new()
 	local hideShowHotkey = ui.config:getHideShowHotkey()
 	local position = ui.config:getPosition()
 
-	ui.window = DialogLoader.spawnDialogFromFile(lfs.writedir() .. 'Scripts\\dialogs\\twitch_chat.dlg', cdata)
+	ui.window = DialogLoader.spawnDialogFromFile(lfs.writedir() .. 'Scripts\\dialogs\\TwitchChat_window.dlg', cdata)
 	ui._currentMode = defaultMode
 	ui.box = ui.window.Box
 	ui.btnMail = ui.window.btnMail

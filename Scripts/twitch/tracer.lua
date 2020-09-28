@@ -1,11 +1,12 @@
 local base = _G
 
-module("twitch.tracer")
+module('twitch.tracer')
 
-local require           = base.require
-local io 			    = base.io
-local os 			    = base.os
-local lfs 			    = require('lfs')
+local require = base.require
+local io = base.io
+local os = base.os
+
+local lfs = require('lfs')
 
 local Tracer = {}
 local Tracer_mt = {__index = Tracer}
