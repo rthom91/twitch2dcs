@@ -9,7 +9,7 @@ Twitch2DCS was primarily created so that DCS World streamers who play in VR can 
 * Customizable hotkey
 * Not dependent on mission start. The UI exists in every aspect of DCS (Main Menu, Config, Mission Editor, In-Mission) allowing you to always be connected to your audience.
 * Random colors assigned to each user in chat.
-* Colors are customizable in Mods/tech/Twitch/Options/optionsDb.lua
+* Colors are customizable in Mods/tech/TwitchDCS/Options/optionsDb.lua
 * Ability to use Multiplayer chat instead of Twitch chat. *Using Multiplayer chat will only allow you to see twitch chat during multiplayer games*.
 
 #### Installation
