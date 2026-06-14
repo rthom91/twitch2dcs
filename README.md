@@ -1,37 +1,44 @@
-### Goals
-Twitch2DCS was primarily created so that DCS World streamers who play in VR can interact with their viewers without the need to take off the HMD, or have Twitch chat hooked up to a text-to-speech engine. By allowing the chat to be visible within DCS, the immersion of the simulator does not have to be broken, and VR streamers can still interact with their audience. Twitch2DCS is not restricted to VR users and will work on a single 2D monitor and surround setups.
+### Purpose
+For content creators of DCS World who fly in VR to interact with their audience without needing to take off the headset or use a TTS engine. VR is not required and will work on a standard monitor setup.
 
 ### Features
-* Separate in-game chat window (similar to multiplayer chat)
-* Easily installed to Saved Games/DCS directory
-* In-game twitch chat communicate both read and write
-* Join/Part messages
-* Customizable hotkey
-* Not dependent on mission start. The UI exists in every aspect of DCS (Main Menu, Config, Mission Editor, In-Mission) allowing you to always be connected to your audience.
-* Random colors assigned to each user in chat.
-* Colors are customizable in Mods/tech/Twitch2DCS/Options/optionsDb.lua
-* Ability to use Multiplayer chat instead of Twitch chat. *Using Multiplayer chat will only allow you to see twitch chat during multiplayer games*.
+* Native DCS chat overlay.
+* Twitch IRCv3 tag support.
+* Read, write, and hidden modes.
+* Raid, Sub, Bit/Cheer alerts
+* Configurable colors.
+* Viewer count in title.
+* Lockable position.
+* Font size slider.
+* Inactivity auto-hide.
+* Mode hotkey selection.
+* Clearable chat messages.
+* Separate Mod/Chat logging.
 
-### Installation
-1. Extract the downloaded file and place both "Mods" and "Scripts" folders inside Saved Games/DCS folder.
-    -- Typically: (C:/Users/ _username_ /Saved Games/DCS) or open Windows Run with LWin+R and enter "%HOMEPATH%/Saved Games", without quotes.
-2. Launch DCS World
-3. Go to Options and find the Special tab for Twitch2DCS.
-4. Enter your Twitch channel name and oAuthentication token from [TwitchApps.com](https://twitchapps.com/tmi/). Make sure to include the "oauth:" at the beginning.
-    -- If DCS posts an error, don't worry, just close the dialog.
-5. Restart DCS World.
+### Limitations
+* Support for EventSub/Helix API is not possible within current DCS 2.9+ environment.
+* Slash commands via IRC was deprecated by Twitch in 2023. Mod now ignores them.
+* Clearing with /clear will not be received by Twitch. Use website or external app.
+* Self messages lack a msgID and cannot be cleared if deleted from website chat.
 
-[![INSTALL AND SETUP](https://media.discordapp.net/attachments/415664512981794818/1075910801052938351/image.png?width=647&height=358)](https://www.youtube.com/watch?v=6-YaacFA63E)
+### Install / Update
+1. Go to C:/Users/ _username_ /Saved Games/DCS
+2. Remove old Twitch2DCS files from inside "/Mods/Tech" and "/Scripts" folders if any exist. *Recommended* 
+3. Extract downloaded release zip, copy then paste both "Mods" and "Scripts" folders inside Saved Games/DCS/
+4. Launch DCS World, go to Options, Special, Twitch2DCS, follow step-up instructions.
 
+_Note: See Optionals folder for message appearance choices._
 
+### Thread
+(pending)
 
-### Upgrading
-1. Extract the downloaded file and place both "Mods" and "Scripts" folders inside Saved Games/DCS folder.
-    -- Typically: (C:/Users/ _username_ /Saved Games/DCS) or open Windows Run with LWin+R and enter "%HOMEPATH%/Saved Games", without quotes.
-2. Launch DCS World
+### Credits
+* Original mod concept by Jabbers
+* Overhauled and modernized by Tailhook
 
-### Troubleshooting
-If for any reason something doesn't want to work right or is posting errors, find and delete 'options.lua' inside Saved Games/DCS/Config then restart DCS World and start over with Installation steps.
+### Donate
+If you enjoy this free mod and want to support continued development.
 
-### Support
-ED Thread - https://forums.eagle.ru/showthread.php?t=178302
+StreamElements: https://streamelements.com/tailhook/tip
+
+Direct: [![Donate with PayPal](https://www.paypalobjects.com/en_US/i/btn/btn_donate_SM.gif)](https://www.paypal.com/donate/?business=EVPF65FZVLLN6)

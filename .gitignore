@@ -1,44 +1,29 @@
-# Compiled Lua sources
+# Logs
+Logs/Twitch2DCS.log
+*.log
+
+# Compiled Lua
 luac.out
 
-# luarocks build files
-*.src.rock
+# Temporary / Editor
+*.tmp
+*.bak
+*.swp
+*~
+
+# DCS
+*.miz.bak
+*.trk
+
+# Visual Studio / IDE
+.vscode/
+.vs/
+*.suo
+*.user
+*.sln
+*.vcxproj*
+
+# LuaRocks / Build
+*.rock
 *.zip
 *.tar.gz
-
-# Object files
-*.o
-*.os
-*.ko
-*.obj
-*.elf
-
-# Precompiled Headers
-*.gch
-*.pch
-
-# Libraries
-*.lib
-*.a
-*.la
-*.lo
-*.def
-*.exp
-
-# Shared objects (inc. Windows DLLs)
-*.dll
-*.so
-*.so.*
-*.dylib
-
-# Executables
-*.exe
-*.out
-*.app
-*.i*86
-*.x86_64
-*.hex
-
-/.vs/twitch2dcs/v15/.suo
-/.vs/slnx.sqlite
-/.vs

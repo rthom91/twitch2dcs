@@ -2,21 +2,19 @@ local base = _G
 
 module("twitch.config")
 
-local require       = base.require
-local table         = base.table
-local string        = base.string
-local math          = base.math
-local type          = base.type
-local assert        = base.assert
-local pairs         = base.pairs
-local ipairs        = base.ipairs
+local require = base.require
+local table = base.table
+local string = base.string
+local math = base.math
+local type = base.type
 
-local utils         = require('twitch.utils')
-local OptionsData	= require('Options.Data')
+local OptionsData = require("Options.Data")
 
 Config = {}
 
 local Config_mt = { __index = Config }
+
+local currentPosition = { x = 0, y = 0 }
 
 function Config:new()
 	local config = base.setmetatable({}, Config_mt)
@@ -32,54 +30,77 @@ function Config:setOption(name, value)
 	OptionsData.saveChanges()
 end
 
-function Config:isEnabled()
-	return self:getOption("isEnabled")
-end
-
-function Config:getPosition()
-	return self:getOption("position")
+function Config:rgbToHex(rgb)
+	local r = math.floor(math.max(0, math.min(1, rgb.r or 0)) * 255)
+	local g = math.floor(math.max(0, math.min(1, rgb.g or 0)) * 255)
+	local b = math.floor(math.max(0, math.min(1, rgb.b or 0)) * 255)
+	return string.format("0x%02X%02X%02XFF", r, g, b)
 end
 
 function Config:getMessageColors()
-	return self:getOption("messageColors")
+	return {
+		{ r = 1.000, g = 0.200, b = 0.200 }, -- #FF3333 Bright Red
+		{ r = 1.000, g = 0.550, b = 0.000 }, -- #FF8C00 Orange
+		{ r = 1.000, g = 0.900, b = 0.000 }, -- #FFE500 Golden Yellow
+		{ r = 0.300, g = 1.000, b = 0.300 }, -- #4CFF4C Lime Green
+		{ r = 0.000, g = 1.000, b = 0.800 }, -- #00FFCC Turquoise
+		{ r = 0.000, g = 0.800, b = 1.000 }, -- #00CCFF Sky Blue
+		{ r = 0.200, g = 0.600, b = 1.000 }, -- #3399FF Bright Blue
+		{ r = 0.600, g = 0.400, b = 1.000 }, -- #9966FF Purple
+		{ r = 1.000, g = 0.300, b = 0.800 }, -- #FF4CCC Hot Pink
+		{ r = 1.000, g = 0.400, b = 0.600 }, -- #FF6699 Pink
+		{ r = 1.000, g = 0.700, b = 0.000 }, -- #FFB200 Amber
+		{ r = 0.400, g = 1.000, b = 0.400 }, -- #66FF66 Light Lime
+		{ r = 0.000, g = 1.000, b = 1.000 }, -- #00FFFF Pure Cyan
+		{ r = 0.800, g = 0.200, b = 1.000 }, -- #CC33FF Bright Violet
+		{ r = 1.000, g = 0.000, b = 0.500 }, -- #FF007F Deep Pink
+	}
 end
 
-function Config:getFontSize()
-	return self:getOption("fontSize")
-end
+-- Main
+function Config:isEnabled() return self:getOption("isEnabled") end
+function Config:getFontSize() return self:getOption("fontSize") end
+function Config:getLockUIPosition() return self:getOption("lockUIPosition") end
+function Config:getHideShowHotkey() return self:getOption("hideShowHotkey") end
+function Config:getHideInactiveTimer() return self:getOption("hideInactiveTimer") or 0 end
 
-function Config:getHideShowHotkey()
-	return self:getOption("hideShowHotkey")
-end
+-- Display
+function Config:getShowUserTags() return self:getOption("showUserTags") end
+function Config:getShowTimestamps() return self:getOption("showTimestamps") end
+function Config:getShowViewerCount() return self:getOption("showViewerCount") end
 
-function Config:getJoinPartColor()
-	return utils.rgbToHex(self:getOption("joinPartColor"))
-end
+-- Notifs
+function Config:getShowRaids() return self:getOption("showRaids") end
+function Config:getShowFollows() return self:getOption("showFollows") end
+function Config:getShowSubscribers() return self:getOption("showSubscribers") end
+function Config:getShowBits() return self:getOption("showBits") end
+function Config:getShowCharity() return self:getOption("showCharity") end
 
-function Config:getShowJoinPartMessages()
-	return self:getOption("showJoinPart")
-end
-
-function Config:getSelfColor()
-	return utils.rgbToHex(self:getOption("selfColor"))
-end
-
-function Config:getLockUIPosition()
-	return self:getOption("lockUIPosition")
+-- Position
+function Config:getPosition()
+	return { x = currentPosition.x, y = currentPosition.y }
 end
 
 function Config:setPosition(value)
-	return self:getOption("position", value)
+	if type(value) == "table" and value.x ~= nil and value.y ~= nil then
+		currentPosition.x = value.x
+		currentPosition.y = value.y
+	end
 end
 
+-- Connection
 function Config:getAuthInfo()
 	return {
 		username = self:getOption("username"),
-		oauthToken = self:getOption("oauth"),
-		hostAddress = self:getOption("hostAddress"),
-		port = self:getOption("port"),
-		caps = self:getOption("caps"),
-		timeout = self:getOption("timeout"),
+		accessToken = self:getOption("oauth"),
+		hostAddress = "irc.chat.twitch.tv",
+		port = 6667,
+		timeout = 0,
+		caps = {
+			"twitch.tv/commands",
+			"twitch.tv/membership",
+			"twitch.tv/tags"
+		}
 	}
 end
 

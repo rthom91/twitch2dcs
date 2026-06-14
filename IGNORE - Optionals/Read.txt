@@ -1,0 +1,3 @@
+Install: Choose which version you want to use. Overwrite Scripts/twitch/ui.lua
+
+Note: Color + Color allows highlighting for copy/paste. Color + White does not. (DCS limitation)
