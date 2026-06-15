@@ -30,7 +30,7 @@ For content creators of DCS World who fly in VR to interact with their audience 
 _Note: See Optionals folder for message appearance choices._
 
 ### Thread
-(pending)
+https://forum.dcs.world/topic/389097-twitch2dcs-v2-rewrite-a-native-solution-for-twitch-chat-inside-dcs
 
 ### Credits
 * Original mod concept by Jabbers
