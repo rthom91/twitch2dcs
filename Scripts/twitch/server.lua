@@ -17,7 +17,32 @@ local Server = {
 	connection = nil,
 	username = nil,
 }
+
 local Server_mt = { __index = Server }
+
+local function formatAccessToken(token)
+	token = string.gsub(token or "", "^%s*(.-)%s*$", "%1")
+	if token == "" then
+		return ""
+	end
+	if not string.find(token, "^oauth:") then
+		return "oauth:" .. token
+	end
+	return token
+end
+
+local function parseIrcTags(tagString)
+	if not tagString then return {} end
+
+	local tags = {}
+	for pair in string.gmatch(tagString, "([^;]+)") do
+		local key, value = string.match(pair, "^([^=]+)=?(.*)$")
+		if key then
+			tags[key] = value or ""
+		end
+	end
+	return tags
+end
 
 function Server:new()
 	local server = base.setmetatable({}, Server_mt)
@@ -31,15 +56,6 @@ function Server:reset()
 	end
 	self.isConnected = false
 	tracer:info("Server connection reset.")
-end
-
-local function formatAccessToken(token)
-	token = string.gsub(token or "", "^%s*(.-)%s*$", "%1")
-	if token == "" then return "" end
-	if not string.find(token, "^oauth:") then
-		return "oauth:" .. token
-	end
-	return token
 end
 
 function Server:connect(authInfo)
@@ -87,7 +103,6 @@ function Server:send(data)
 	if not success then
 		tracer:error("DCS -> Twitch: " .. (err or "send failed"))
 	end
-	-- tracer:info("DCS -> Twitch: " .. data)   -- debugging
 end
 
 function Server:receive()
@@ -96,6 +111,7 @@ function Server:receive()
 	end
 
 	local buffer, err
+
 	repeat
 		buffer, err = self.connection:receive("*l")
 
@@ -103,7 +119,7 @@ function Server:receive()
 			if string.sub(buffer, 1, 4) == "PING" then
 				self:send(string.gsub(buffer, "PING", "PONG", 1))
 			else
-				local tags, rest = string.match(buffer, "^@([^ ]+) (.*)$")
+				local tagsStr, rest = string.match(buffer, "^@([^ ]+) (.*)$")
 				local line = rest or buffer
 
 				local prefix, cmd, param = string.match(line, "^:([^ ]+) ([^ ]+)(.*)$")
@@ -111,10 +127,10 @@ function Server:receive()
 				local handlers = self.commandHandlers[cmd]
 				if param and handlers then
 					param = string.sub(param, 2)
-
 					local param1, param2 = string.match(param, "^([^:]+) :(.*)$")
 
-					local user, userhost, displayName = nil, nil, ""
+					local user, userhost = nil, nil
+					local displayName = ""
 					local isStaff, isModerator, isVIP, isSubscriber = false, false, false, false
 					local msgId, targetMsgId, systemMsg, msgIdType, bits = nil, nil, nil, nil, nil
 
@@ -122,17 +138,18 @@ function Server:receive()
 						user, userhost = string.match(prefix, "^([^!]+)!(.*)$")
 					end
 
-					if tags then
-						displayName = string.match(tags, "display%-name=([^;]+)") or user or ""
-						msgId = string.match(tags, "id=([^;]+)")
-						targetMsgId = string.match(tags, "target%-msg%-id=([^;]+)")
-						systemMsg = string.match(tags, "system%-msg=([^;]+)")
-						msgIdType = string.match(tags, "msg%-id=([^;]+)")
-						bits = string.match(tags, "bits=([^;]+)")
+					if tagsStr then
+						local tags = parseIrcTags(tagsStr)
 
-						local badges = string.match(tags, "badges=([^;]+)")
-						if badges then
-							for badge in string.gmatch(badges, "([^,]+)") do
+						displayName = tags["display-name"] or user or ""
+						msgId = tags["id"]
+						msgIdType = tags["msg-id"]
+						targetMsgId = tags["target-msg-id"]
+						systemMsg = tags["system-msg"]
+						bits = tags["bits"]
+
+						if tags["badges"] then
+							for badge in string.gmatch(tags["badges"], "([^,]+)") do
 								if badge:find("^staff/") or badge:find("^admin/") then
 									isStaff = true
 								elseif badge:find("^moderator/") or badge:find("^broadcaster/") then
@@ -144,10 +161,15 @@ function Server:receive()
 								end
 							end
 						end
-						if string.match(tags, "mod=1") then isModerator = true end
+
+						if tags["mod"] == "1" then
+							isModerator = true
+						end
 					end
 
-					if displayName == "" then displayName = user or "" end
+					if displayName == "" then
+						displayName = user or ""
+					end
 
 					for _, handler in ipairs(handlers) do
 						handler({
@@ -157,15 +179,15 @@ function Server:receive()
 							userhost = userhost,
 							param1 = param1,
 							param2 = param2,
-							tags = tags,
+							tags = tagsStr,
 							isStaff = isStaff,
 							isModerator = isModerator,
 							isVIP = isVIP,
 							isSubscriber = isSubscriber,
 							msgId = msgId,
+							msgIdType = msgIdType,
 							targetMsgId = targetMsgId,
 							systemMsg = systemMsg,
-							msgIdType = msgIdType,
 							bits = bits
 						})
 					end
@@ -188,9 +210,11 @@ end
 
 function Server:removeCommandHandler(cmd, handler)
 	if not self.commandHandlers[cmd] then return end
+
 	for i = #self.commandHandlers[cmd], 1, -1 do
 		if self.commandHandlers[cmd][i] == handler then
 			table.remove(self.commandHandlers[cmd], i)
+			break
 		end
 	end
 end

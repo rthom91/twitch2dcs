@@ -6,11 +6,11 @@ local os = base.os
 local io = base.io
 local require = base.require
 local string = base.string
-local net = base.net
 local lfs = require("lfs")
 
 local Tracer = {}
 local Tracer_mt = { __index = Tracer }
+
 local _instance = nil
 
 local function getInstance()
@@ -20,7 +20,6 @@ local function getInstance()
 		local fullPath = logDir .. filename
 
 		_instance = base.setmetatable({}, Tracer_mt)
-
 		_instance.file = io.open(fullPath, "w")
 
 		if _instance.file then
@@ -28,6 +27,7 @@ local function getInstance()
 			_instance.file:flush()
 		end
 	end
+
 	return _instance
 end
 
@@ -44,7 +44,9 @@ function Tracer:error(str)
 end
 
 function Tracer:write(level, message)
-	if not self.file or not message then return end
+	if not self.file or not message then
+		return
+	end
 
 	local timestamp = os.date("%H:%M:%S")
 	self.file:write(string.format("[%s] %-4s | %s\r\n", timestamp, level, message))

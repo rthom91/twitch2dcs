@@ -5,13 +5,13 @@ module("twitch.ui")
 local require = base.require
 local table = base.table
 local string = base.string
+local tostring = base.tostring
 local math = base.math
 local pairs = base.pairs
 local ipairs = base.ipairs
 
 local os = require("os")
 local lfs = require("lfs")
-local net = require("net")
 local DCS = require("DCS")
 local Skin = require("Skin")
 local Gui = require("dxgui")
@@ -22,7 +22,9 @@ local Config = require("twitch.config")
 local tracer = require("twitch.tracer")
 
 local MAX_DISPLAYED_MESSAGES = 150
-local MAX_TWITCH_MESSAGE_LENGTH = 500	-- Enforced by Twitch
+local MAX_MESSAGE_LENGTH = 500	-- Enforced by Twitch
+local DEFAULT_WINDOW_WIDTH = 360
+local DEFAULT_WINDOW_HEIGHT = 455
 
 local modes = {
 	hidden = "hidden",
@@ -30,46 +32,62 @@ local modes = {
 	write = "write",
 }
 
+local keyboardLocked = false
+
 local UI = {
 	_isWindowCreated = false,
 	_currentWheelValue = 0,
 	_listStatics = {},
 	_listMessages = {},
 	_currentMode = modes.read,
+
 	_x = 0,
 	_y = 0,
-	_isKeyboardLocked = false,
-	_title = "Twitch Chat",
+	widthChat = 0,
+	heightChat = 0,
+
 	viewerCount = 0,
-	modes = modes,
 	fontSize = 14,
 	noReadMsg = 0,
 	lockUIPosition = false,
 	inactiveMinutes = 0,
+
 	lastActivityTime = 0,
 	lastHideTimer = 0,
 	lastHotkey = nil,
 	lastLockPosition = false,
 	lastShowViewerCount = nil,
-	forceScrollToBottomOnReveal = false,
+	pendingScrollToBottom = false,
+	_forceBottomScroll = false,
 
+	window = nil,
+	box = nil,
+	btnMail = nil,
+	pNoVisible = nil,
+	pMsg = nil,
+	vsScroll = nil,
 	pDown = nil,
 	eMessage = nil,
 	pBtn = nil,
 	tbAll = nil,
 	sAll = nil,
 	sAllies = nil,
-	btnMail = nil,
 
 	testStatic = nil,
 	testE = nil,
 	eMx = 0, eMy = 0, eMw = 0,
+
 	messageSkin = nil,
+	skinFactory = nil,
+	skinModeWrite = nil,
+	skinModeRead = nil,
+	skinMail = nil,
+
+	config = nil,
+	callbacks = nil,
 }
 
 local UI_mt = { __index = UI }
-
-local keyboardLocked = false
 
 local function unlockKeyboardInput(releaseKeyboardKeys)
 	if keyboardLocked then
@@ -84,7 +102,7 @@ local function lockKeyboardInput()
 	local keyboardEvents = Input.getDeviceKeys(Input.getKeyboardDeviceName())
 	local inputActions = Input.getEnvTable().Actions
 
-	local removeCommandEvents = function(commandEvents)
+	local function removeCommandEvents(commandEvents)
 		if not commandEvents then return end
 		for _, cmd in ipairs(commandEvents) do
 			for j = #keyboardEvents, 1, -1 do
@@ -105,14 +123,56 @@ local function lockKeyboardInput()
 	keyboardLocked = true
 end
 
+function UI:_setupSkins()
+	self.skinFactory = self.window.pNoVisible.eWhiteText
+	self.skinModeWrite = self.pNoVisible.pModeWrite:getSkin()
+	self.skinModeRead = self.pNoVisible.pModeRead:getSkin()
+	self.skinMail = self.btnMail:getSkin()
+
+	local msgSkin = self.skinFactory:getSkin()
+	msgSkin.skinData.states.released[2].text.color = "0xddddddff"
+	self.messageSkin = msgSkin
+end
+
+function UI:_createMessageWidgets()
+	self.testStatic = EditBox.new()
+	self.testStatic:setReadOnly(true)
+	self.testStatic:setTextWrapping(true)
+	self.testStatic:setMultiline(true)
+	self.testStatic:setBounds(0, 0, self.widthChat, 20)
+
+	self.testE = EditBox.new()
+	self.testE:setTextWrapping(true)
+	self.testE:setMultiline(true)
+	self.testE:setBounds(0, 0, 281, 20)
+
+	for i = 1, 60 do
+		local staticNew = EditBox.new()
+		table.insert(self._listStatics, staticNew)
+		staticNew:setReadOnly(true)
+		staticNew:setTextWrapping(true)
+		staticNew:setMultiline(true)
+		self.pMsg:insertWidget(staticNew)
+	end
+end
+
+function UI:_applyTransparentSkin()
+	local skin = Skin.windowSkinTransparent()
+	local header = skin.skinData.skins.header.skinData.states
+
+	header.disabled[1].bkg.center_center = 0x00000000
+	header.released[1].bkg.center_center = 0x00000000
+	header.released[2].bkg.center_center = 0x00000000
+
+	return skin
+end
+
 function UI:new()
 	local ui = base.setmetatable({}, UI_mt)
-
 	ui.config = Config:new()
 
-	local fontSize = ui.config:getFontSize()
-	local hideShowHotkey = ui.config:getHideShowHotkey()
 	local position = ui.config:getPosition()
+	local hideShowHotkey = ui.config:getHideShowHotkey()
 
 	ui.window = DialogLoader.spawnDialogFromFile(lfs.writedir() .. "Scripts\\dialogs\\TwitchChat.dlg", cdata)
 	ui.box = ui.window.Box
@@ -134,7 +194,7 @@ function UI:new()
 		ui.window:addHotKeyCallback(hideShowHotkey, function() ui:nextMode() end)
 	end
 
-	ui.eMessage.onKeyDown = function(self, key)
+	ui.eMessage.onKeyDown = function(_, key)
 		if key == "return" or key == "enter" then
 			ui:sendMessage()
 			return true
@@ -159,34 +219,8 @@ function UI:new()
 
 	ui.widthChat, ui.heightChat = ui.pMsg:getSize()
 
-	ui.skinFactory = ui.window.pNoVisible.eWhiteText
-	ui.skinModeWrite = ui.pNoVisible.pModeWrite:getSkin()
-	ui.skinModeRead = ui.pNoVisible.pModeRead:getSkin()
-	ui.skinMail = ui.btnMail:getSkin()
-
-	local msgSkin = ui.skinFactory:getSkin()
-	msgSkin.skinData.states.released[2].text.color = "0xddddddff"
-	ui.messageSkin = msgSkin
-
-	ui.testStatic = EditBox.new()
-	ui.testStatic:setReadOnly(true)
-	ui.testStatic:setTextWrapping(true)
-	ui.testStatic:setMultiline(true)
-	ui.testStatic:setBounds(0, 0, ui.widthChat, 20)
-
-	ui.testE = EditBox.new()
-	ui.testE:setTextWrapping(true)
-	ui.testE:setMultiline(true)
-	ui.testE:setBounds(0, 0, 281, 20)
-
-	for i = 1, 60 do
-		local staticNew = EditBox.new()
-		table.insert(ui._listStatics, staticNew)
-		staticNew:setReadOnly(true)
-		staticNew:setTextWrapping(true)
-		staticNew:setMultiline(true)
-		ui.pMsg:insertWidget(staticNew)
-	end
+	ui:_setupSkins()
+	ui:_createMessageWidgets()
 
 	ui.w, ui.h = Gui.GetWindowSize()
 	ui:resize(ui.w, ui.h)
@@ -194,7 +228,7 @@ function UI:new()
 	ui._x = position.x
 	ui._y = position.y
 
-	local x, y, w, h = ui.eMessage:getBounds()
+	local x, y, w, _ = ui.eMessage:getBounds()
 	ui.eMx, ui.eMy, ui.eMw = x, y, w
 
 	ui.lockUIPosition = ui.config:getLockUIPosition()
@@ -203,7 +237,6 @@ function UI:new()
 	ui.lastHotkey = ui.config:getHideShowHotkey()
 	ui.lastLockPosition = ui.lockUIPosition
 	ui.lastActivityTime = os.time()
-	ui.forceScrollToBottomOnReveal = false
 
 	ui.lockKeyboardInput = lockKeyboardInput
 	ui.unlockKeyboardInput = unlockKeyboardInput
@@ -219,6 +252,10 @@ function UI:new()
 	ui:setVisible(true)
 
 	return ui
+end
+
+function UI:resetInactivityTimer()
+	self.lastActivityTime = os.time()
 end
 
 function UI:checkInactivity()
@@ -270,6 +307,198 @@ function UI:removeMessage(msgId)
 	self:updateListM()
 end
 
+function UI:isScrolledToBottom()
+	local total = #self._listMessages
+	if total == 0 then return true end
+	return (self.vsScroll:getValue() + self.vsScroll:getThumbValue() >= total - 2)
+end
+
+function UI:scrollToBottom()
+	self.vsScroll:setValue(#self._listMessages)
+	self._currentWheelValue = #self._listMessages
+end
+
+function UI:addMessage(userPrefix, fullMessage, userSkin, msgId)
+	self:resetInactivityTimer()
+
+	local testSkin = self.skinFactory:getSkin()
+	testSkin.skinData.states.released[2].text.fontSize = self.fontSize
+	self.testStatic:setSkin(testSkin)
+	self.testStatic:setText(fullMessage)
+
+	local _, newH = self.testStatic:calcSize()
+
+	local msg = {
+		user = userPrefix,
+		message = fullMessage,
+		userSkin = userSkin or self.messageSkin,
+		messageSkin = self.messageSkin,
+		height = newH,
+		timeStart = DCS.getModelTime(),
+		msgId = msgId
+	}
+
+	table.insert(self._listMessages, msg)
+
+	if #self._listMessages > MAX_DISPLAYED_MESSAGES then
+		table.remove(self._listMessages, 1)
+	end
+
+	self.vsScroll:setRange(1, #self._listMessages)
+	self.vsScroll:setThumbValue(1)
+
+	if self._forceBottomScroll or self:isScrolledToBottom() then
+		self:scrollToBottom()
+		self._forceBottomScroll = false
+	else
+		self.vsScroll:setValue(self._currentWheelValue)
+	end
+
+	self:updateListM()
+
+	if self._currentMode == modes.hidden then
+		self.noReadMsg = self.noReadMsg + 1
+		self:updateNoReadMsg()
+	end
+end
+
+function UI:updateListM()
+	for _, v in pairs(self._listStatics) do
+		v:setText("")
+	end
+
+	local total = #self._listMessages
+	if total == 0 then return end
+
+	local curMsg = self.vsScroll:getValue() + (self.vsScroll:getThumbValue() or 1)
+	if curMsg > total then curMsg = total end
+
+	local offset = 0
+	local curStatic = 1
+
+	while curMsg >= 1 and offset < self.heightChat and curStatic + 1 <= #self._listStatics do
+		local msg = self._listMessages[curMsg]
+
+		msg.userSkin.skinData.states.released[2].text.fontSize = self.fontSize
+		self._listStatics[curStatic + 1]:setSkin(msg.userSkin)
+		self._listStatics[curStatic + 1]:setBounds(0, self.heightChat - offset - msg.height, self.widthChat, msg.height)
+		self._listStatics[curStatic + 1]:setText(msg.user)
+
+		msg.messageSkin.skinData.states.released[2].text.fontSize = self.fontSize
+		self._listStatics[curStatic]:setSkin(msg.messageSkin)
+		self._listStatics[curStatic]:setBounds(0, self.heightChat - offset - msg.height, self.widthChat, msg.height)
+		self._listStatics[curStatic]:setText(msg.message)
+
+		offset = offset + msg.height
+		curMsg = curMsg - 1
+		curStatic = curStatic + 2
+	end
+
+	for i = curStatic, #self._listStatics do
+		self._listStatics[i]:setText("")
+	end
+end
+
+function UI:recalculateAllMessageHeights()
+	for _, msg in ipairs(self._listMessages) do
+		if msg.message then
+			self.testStatic:setText(msg.message)
+			local _, newH = self.testStatic:calcSize()
+			msg.height = newH
+		end
+	end
+end
+
+function UI:updateCursor()
+	local shouldLock = self.lockUIPosition and (self._currentMode == modes.read or self._currentMode == modes.hidden)
+	self.window:setHasCursor(not shouldLock)
+end
+
+function UI:writeMode()
+	self._currentMode = modes.write
+	tracer:info("UI → write mode")
+
+	self:setVisible(true)
+	self.box:setVisible(true)
+	self.pDown:setVisible(true)
+	self.eMessage:setVisible(true)
+	self.eMessage:setFocused(true)
+
+	self.box:setSkin(self.skinModeWrite)
+	self.window:setSkin(Skin.windowSkinChatWrite())
+	self.vsScroll:setVisible(true)
+
+	self:lockKeyboardInput()
+	self:resetInactivityTimer()
+
+	if self.pendingScrollToBottom then
+		self:scrollToBottom()
+		self.pendingScrollToBottom = false
+	end
+
+	self:updateListM()
+	self:resizeEditMessage()
+	self:updateCursor()
+end
+
+function UI:readMode()
+	self._currentMode = modes.read
+	tracer:info("UI → read mode")
+
+	self:setVisible(true)
+	self:setTitle(self.viewerCount)
+	self.box:setVisible(true)
+	self.pDown:setVisible(false)
+	self.box:setSkin(self.skinModeRead)
+
+	self.window:setSize(DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT)
+	self.window:setSkin(self:_applyTransparentSkin())
+	self.vsScroll:setVisible(false)
+
+	self:setVisibleBtnMail(false)
+	self:unlockKeyboardInput(true)
+	self:resetInactivityTimer()
+	self:updateCursor()
+
+	if self.pendingScrollToBottom then
+		self:scrollToBottom()
+		self.pendingScrollToBottom = false
+	end
+
+	self:updateListM()
+	self.noReadMsg = 0
+end
+
+function UI:hideMode()
+	self._currentMode = modes.hidden
+	tracer:info("UI → hidden mode")
+
+	self.box:setVisible(false)
+	self.pDown:setVisible(false)
+	self.window:setText("")
+
+	self.window:setSkin(self:_applyTransparentSkin())
+	self.vsScroll:setVisible(false)
+
+	self.btnMail:setBounds(12, 0, 24, 55)
+	self:setVisibleBtnMail(true)
+	self:unlockKeyboardInput(true)
+	self:updateNoReadMsg()
+	self:updateCursor()
+
+	self.pendingScrollToBottom = true
+end
+
+function UI:nextMode()
+	if self._currentMode == modes.hidden then
+		self:readMode()
+	elseif self._currentMode == modes.read then
+		self:writeMode()
+	else
+		self:hideMode()
+	end
+end
+
 function UI:checkSettingChanges()
 	local currentTimer = self.config:getHideInactiveTimer() or 0
 	local currentHotkey = self.config:getHideShowHotkey()
@@ -277,7 +506,7 @@ function UI:checkSettingChanges()
 	local currentViewerCount = self.config:getShowViewerCount()
 
 	if currentLock ~= self.lastLockPosition then
-		tracer:info("Lock overlay position: " .. (currentLock and "ENABLED" or "DISABLED"))
+		tracer:info("Lock UI position: " .. (currentLock and "ON" or "OFF"))
 		self.lastLockPosition = currentLock
 		self.lockUIPosition = currentLock
 		self:updateCursor()
@@ -299,14 +528,44 @@ function UI:checkSettingChanges()
 	end
 end
 
-function UI:onChange_tbAll()
-	if self.tbAll:getState() then
-		self.sAll:setSkin(self.pNoVisible.sSelAll:getSkin())
-		self.sAllies:setSkin(self.pNoVisible.sNoSelAllies:getSkin())
-	else
-		self.sAll:setSkin(self.pNoVisible.sNoSelAll:getSkin())
-		self.sAllies:setSkin(self.pNoVisible.sSelAllies:getSkin())
+function UI:setTitle(viewerCount)
+	self.viewerCount = viewerCount or 0
+	if self._currentMode == modes.read or self._currentMode == modes.write then
+		if self.config:getShowViewerCount() and self.viewerCount > 0 then
+			self.window:setText(" Twitch (" .. self.viewerCount .. ")")
+		else
+			self.window:setText(" Twitch")
+		end
 	end
+end
+
+function UI:setCallbacks(callbacks)
+	self.callbacks = callbacks
+end
+
+function UI:onCallback(callback, args)
+	if self.callbacks and self.callbacks[callback] then
+		self.callbacks[callback](args)
+	end
+end
+
+function UI:sendMessage()
+	if self._currentMode ~= modes.write or not self.eMessage then return end
+
+	local msg = self.eMessage:getText() or ""
+	msg = string.gsub(msg, "[\r\n]+", " ")
+	msg = string.match(msg, "^%s*(.-)%s*$") or ""
+
+	if msg == "" then return end
+	if #msg > MAX_MESSAGE_LENGTH then
+		msg = string.sub(msg, 1, MAX_MESSAGE_LENGTH)
+	end
+
+	self._forceBottomScroll = true
+	self:onCallback("onUISendMessage", { message = msg })
+	self.eMessage:setText("")
+	self:resizeEditMessage()
+	self:scrollToBottom()
 end
 
 function UI:resizeEditMessage()
@@ -328,305 +587,86 @@ function UI:resizeEditMessage()
 	self.pMsg:setBounds(17, 10, 316, newMsgH)
 	self.heightChat = newMsgH
 
-	local dx, dy, dw, dh = self.pDown:getBounds()
+	local dx, dy, dw, _ = self.pDown:getBounds()
 	self.pDown:setBounds(dx, dy, dw, self.eMy + newH + 117)
-	self.window:setSize(360, newBoxH + 55)
 
+	self.window:setSize(DEFAULT_WINDOW_WIDTH, newBoxH + 55)
 	self:updateListM()
 end
 
-function UI:updateCursor()
-	if self.lockUIPosition and (self._currentMode == modes.read or self._currentMode == modes.hidden) then
-		self.window:setHasCursor(false)
+function UI:onChange_tbAll()
+	if self.tbAll:getState() then
+		self.sAll:setSkin(self.pNoVisible.sSelAll:getSkin())
+		self.sAllies:setSkin(self.pNoVisible.sNoSelAllies:getSkin())
 	else
-		self.window:setHasCursor(true)
+		self.sAll:setSkin(self.pNoVisible.sNoSelAll:getSkin())
+		self.sAllies:setSkin(self.pNoVisible.sSelAllies:getSkin())
 	end
 end
-
-function UI:writeMode()
-	self._currentMode = modes.write
-	tracer:info("Setting UI to write mode.")
-	self:setVisible(true)
-	self.box:setVisible(true)
-	self.pDown:setVisible(true)
-	self.eMessage:setVisible(true)
-	self.eMessage:setFocused(true)
-	self.box:setSkin(self.skinModeWrite)
-	self.window:setSkin(Skin.windowSkinChatWrite())
-	self.vsScroll:setVisible(true)
-	self:lockKeyboardInput()
-	self:resetInactivityTimer()
-
-	if self.forceScrollToBottomOnReveal then
-		self.vsScroll:setValue(#self._listMessages)
-		self._currentWheelValue = #self._listMessages
-		self.forceScrollToBottomOnReveal = false
-	end
-
-	self:updateListM()
-	self:resizeEditMessage()
-	self:updateCursor()
-end
-
-function UI:readMode()
-	self._currentMode = modes.read
-	tracer:info("Setting UI to read mode.")
-	self:setVisible(true)
-	self:setTitle(self.viewerCount)
-	self.box:setVisible(true)
-	self.pDown:setVisible(false)
-	self.box:setSkin(self.skinModeRead)
-
-	local skin = Skin.windowSkinTransparent()
-	skin.skinData.skins.header.skinData.states.disabled[1].bkg.center_center = 0x00000000
-	skin.skinData.skins.header.skinData.states.released[1].bkg.center_center = 0x00000000
-	skin.skinData.skins.header.skinData.states.released[2].bkg.center_center = 0x00000000
-
-	self.window:setSize(360, 455)
-	self.window:setSkin(skin)
-	self.vsScroll:setVisible(false)
-	self:setVisibleBtnMail(false)
-	self:unlockKeyboardInput(true)
-	self:resetInactivityTimer()
-	self:updateCursor()
-
-	if self.forceScrollToBottomOnReveal then
-		self.vsScroll:setValue(#self._listMessages)
-		self._currentWheelValue = #self._listMessages
-		self.forceScrollToBottomOnReveal = false
-	end
-
-	self:updateListM()
-	self.noReadMsg = 0
-end
-
-function UI:hideMode()
-	self._currentMode = modes.hidden
-	tracer:info("Setting UI to hidden mode.")
-	self.box:setVisible(false)
-	self.pDown:setVisible(false)
-	self.window:setText("")
-
-	local skin = Skin.windowSkinTransparent()
-	skin.skinData.skins.header.skinData.states.disabled[1].bkg.center_center = 0x00000000
-	skin.skinData.skins.header.skinData.states.released[1].bkg.center_center = 0x00000000
-	skin.skinData.skins.header.skinData.states.released[2].bkg.center_center = 0x00000000
-
-	self.window:setSkin(skin)
-	self.vsScroll:setVisible(false)
-	self.btnMail:setBounds(12, 0, 24, 55)
-	self:setVisibleBtnMail(true)
-	self:unlockKeyboardInput(true)
-	self:updateNoReadMsg()
-	self:updateCursor()
-	self.forceScrollToBottomOnReveal = true
-end
-
-function UI:addMessage(userPrefix, fullMessage, userSkin, msgId)
-	self:resetInactivityTimer()
-
-	local testSkin = self.skinFactory:getSkin()
-	testSkin.skinData.states.released[2].text.fontSize = self.fontSize
-	self.testStatic:setSkin(testSkin)
-
-	self.testStatic:setText(fullMessage)
-	local _, newH = self.testStatic:calcSize()
-
-	local msg = {
-		user = userPrefix,
-		message = fullMessage,
-		userSkin = userSkin or self.messageSkin,
-		messageSkin = self.messageSkin,
-		height = newH,
-		timeStart = DCS.getModelTime(),
-		msgId = msgId
-	}
-
-	table.insert(self._listMessages, msg)
-
-	if #self._listMessages > MAX_DISPLAYED_MESSAGES then
-		table.remove(self._listMessages, 1)
-		if self._currentWheelValue > 1 then
-			self._currentWheelValue = self._currentWheelValue - 1
-		end
-	end
-
-	self.vsScroll:setRange(1, #self._listMessages)
-	self.vsScroll:setThumbValue(1)
-
-	local atBottom = (self._currentWheelValue >= #self._listMessages - 10) or (self._currentWheelValue == 0)
-
-	if atBottom then
-		self.vsScroll:setValue(#self._listMessages)
-		self._currentWheelValue = #self._listMessages
-	else
-		self.vsScroll:setValue(self._currentWheelValue)
-	end
-
-	self:updateListM()
-
-	if self._currentMode == modes.hidden then
-		self.noReadMsg = self.noReadMsg + 1
-		self:updateNoReadMsg()
-	end
-end
-
-function UI:resetInactivityTimer()
-	self.lastActivityTime = os.time()
-end
-
-function UI:updateListM()
-	for _, v in pairs(self._listStatics) do v:setText("") end
-
-	local total = #self._listMessages
-	if total == 0 then return end
-
-	local curMsg = self.vsScroll:getValue() + (self.vsScroll:getThumbValue() or 1)
-	if curMsg > total then curMsg = total end
-
-	local offset = 0
-	local curStatic = 1
-
-	while curMsg >= 1 and offset < self.heightChat and curStatic + 1 <= #self._listStatics do
-		local msg = self._listMessages[curMsg]
-
-		-- User (color)
-		msg.userSkin.skinData.states.released[2].text.fontSize = self.fontSize
-		self._listStatics[curStatic+1]:setSkin(msg.userSkin)
-		self._listStatics[curStatic+1]:setBounds(0, self.heightChat - offset - msg.height, self.widthChat, msg.height)
-		self._listStatics[curStatic+1]:setText(msg.user)
-
-		-- Message (white)
-		msg.messageSkin.skinData.states.released[2].text.fontSize = self.fontSize
-		self._listStatics[curStatic]:setSkin(msg.messageSkin)
-		self._listStatics[curStatic]:setBounds(0, self.heightChat - offset - msg.height, self.widthChat, msg.height)
-		self._listStatics[curStatic]:setText(msg.message)
-
-		offset = offset + msg.height
-		curMsg = curMsg - 1
-		curStatic = curStatic + 2
-	end
-
-	for i = curStatic, #self._listStatics do
-		self._listStatics[i]:setText("")
-	end
-end
-
-function UI:setTitle(viewerCount)
-	self.viewerCount = viewerCount or 0
-	if self._currentMode == modes.read or self._currentMode == modes.write then
-		local showCount = self.config:getShowViewerCount()
-		if showCount and self.viewerCount > 0 then
-			self.window:setText(" Twitch (" .. self.viewerCount .. ")")
-		else
-			self.window:setText(" Twitch")
-		end
-	end
-end
-
-function UI:setCallbacks(callbacks) self.callbacks = callbacks end
-
-function UI:onCallback(callback, args)
-	if self.callbacks and self.callbacks[callback] then
-		self.callbacks[callback](args)
-	end
-end
-
-function UI:setVisible(b) self.window:setVisible(b) end
 
 function UI:setFontSize(fontSize)
 	self.fontSize = fontSize
+
 	local testSkin = self.skinFactory:getSkin()
-	testSkin.skinData.states.released[2].text.fontSize = self.fontSize
+	testSkin.skinData.states.released[2].text.fontSize = fontSize
 	self.testStatic:setSkin(testSkin)
 
 	if self.messageSkin then
-		self.messageSkin.skinData.states.released[2].text.fontSize = self.fontSize
+		self.messageSkin.skinData.states.released[2].text.fontSize = fontSize
 	end
 
 	self:recalculateAllMessageHeights()
 	self:updateListM()
 end
 
-function UI:recalculateAllMessageHeights()
-	for _, msg in ipairs(self._listMessages) do
-		if msg.message then
-			self.testStatic:setText(msg.message)
-			local _, newH = self.testStatic:calcSize()
-			msg.height = newH
-		end
-	end
-end
-
-function UI:sendMessage()
-	if self._currentMode == modes.write and self.eMessage then
-		local msg = self.eMessage:getText() or ""
-		msg = string.gsub(msg, "[\r\n]+", " ")
-		msg = string.match(msg, "^%s*(.-)%s*$") or ""
-		if msg ~= "" then
-			if #msg > MAX_TWITCH_MESSAGE_LENGTH then
-				msg = string.sub(msg, 1, MAX_TWITCH_MESSAGE_LENGTH)
-			end
-			self:onCallback("onUISendMessage", {message = msg})
-			self.eMessage:setText("")
-			self:resizeEditMessage()
-		end
-	end
-end
-
-function UI:nextMode()
-	if self._currentMode == modes.hidden then
-		self:readMode()
-	elseif self._currentMode == modes.read then
-		self:writeMode()
-	else
-		self:hideMode()
-	end
-end
-
-function UI:resize(w, h)
-	self.window:setBounds(self._x, self._y, 360, 455)
-	self.box:setBounds(0, 0, 360, 400)
-	if self.btnMail then
-		self.btnMail:setBounds(12, 0, 24, 55)
-	end
+function UI:setVisible(b)
+	self.window:setVisible(b)
 end
 
 function UI:setVisibleBtnMail(b)
 	if not self.btnMail then return end
-	if self.noReadMsg == 0 then
-		self.btnMail:setVisible(false)
-	else
-		self.btnMail:setVisible(b)
-	end
+	self.btnMail:setVisible(b and self.noReadMsg > 0)
 end
 
 function UI:updateNoReadMsg()
 	if not self.btnMail then return end
-	local txt = self.noReadMsg >= 100 and "99+" or base.tostring(self.noReadMsg)
-	if self._currentMode == modes.hidden and self.noReadMsg > 0 then
-		self:setVisibleBtnMail(true)
-	end
+
+	local txt = self.noReadMsg >= 100 and "99+" or tostring(self.noReadMsg)
 	self.btnMail:setText(txt)
+
+	if self._currentMode == modes.hidden and self.noReadMsg > 0 then
+		self.btnMail:setVisible(true)
+	end
 end
 
 function UI:positionCallback()
 	local x, y = self.window:getPosition()
+
 	if self.lockUIPosition then
 		self.window:setPosition(self._x, self._y)
 		return
 	end
-	x = math.max(math.min(x, self.w - 360), 0)
+
+	x = math.max(math.min(x, self.w - DEFAULT_WINDOW_WIDTH), 0)
 	y = math.max(math.min(y, self.h - 400), 0)
+
 	self._x = x
 	self._y = y
 	self.window:setPosition(x, y)
-	self:onCallback("onUIPositionChanged", {x = x, y = y})
+	self:onCallback("onUIPositionChanged", { x = x, y = y })
 end
 
 function UI:onChange_vsScroll()
 	self._currentWheelValue = self.vsScroll:getValue()
 	self:updateListM()
+end
+
+function UI:resize(w, h)
+	self.window:setBounds(self._x, self._y, DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT)
+	self.box:setBounds(0, 0, DEFAULT_WINDOW_WIDTH, 400)
+	if self.btnMail then
+		self.btnMail:setBounds(12, 0, 24, 55)
+	end
 end
 
 return UI

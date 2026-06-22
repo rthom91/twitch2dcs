@@ -11,7 +11,6 @@ local type = base.type
 local OptionsData = require("Options.Data")
 
 Config = {}
-
 local Config_mt = { __index = Config }
 
 local currentPosition = { x = 0, y = 0 }
