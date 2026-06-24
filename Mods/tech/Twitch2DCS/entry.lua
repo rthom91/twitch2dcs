@@ -5,7 +5,7 @@ declare_plugin("Twitch2DCS",
 	developerLink = _("https://github.com/rthom91/twitch2dcs"),
 	displayName = _("Twitch2DCS"),
 	state = "installed",
-	version = "2.0.0",
+	version = "2.1.0",
 	Options = {
 		{
 			name = _("Twitch2DCS"),
