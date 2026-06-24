@@ -6,7 +6,7 @@ For content creators of DCS World who fly in VR to interact with their audience 
 * Twitch IRCv3 tag support.
 * Read, write, and hidden modes.
 * Raid, Sub, Bit/Cheer alerts
-* Configurable colors.
+* Color selection option
 * Viewer count in title.
 * Lockable position.
 * Font size slider.
@@ -29,7 +29,8 @@ For content creators of DCS World who fly in VR to interact with their audience 
 
 _Note: See Optionals folder for message appearance choices._
 
-### Thread
+### Links
+https://www.digitalcombatsimulator.com/en/files/3350538
 https://forum.dcs.world/topic/389097-twitch2dcs-v2-rewrite-a-native-solution-for-twitch-chat-inside-dcs
 
 ### Credits
