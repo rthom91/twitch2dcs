@@ -16,6 +16,7 @@ cdata = {
 	TWITCH2DCS_SHOW_SUBSCRIBERS = _("Show subscriptions"),
 	TWITCH2DCS_SHOW_BITS = _("Show bits/cheers"),
 	TWITCH2DCS_SHOW_CHARITY = _("Show charity"),
+	TWITCH2DCS_COLOR_SELECTION = _("Color selection"),
 	TWITCH2DCS_FONTSIZE = _("Font size (10-18px)"),
 	TWITCH2DCS_HIDE_INACTIVE_TIMER = _("Inactivity hide timer"),
 	TWITCH2DCS_MODESHOTKEY = _("Mode switch hotkey"),

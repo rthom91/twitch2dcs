@@ -44,10 +44,10 @@ local status, err = pcall(function()
 		server = nil,
 		ui = nil,
 		userSkins = {},
-		nextUserIndex = 1,
 		userNames = {},
 		chatLog = nil,
 		lastViewerUpdate = 0,
+		broadcasterColor = nil,
 	}
 
 	local TwitchClient_mt = { __index = TwitchClient }
@@ -56,6 +56,7 @@ local status, err = pcall(function()
 
 	local lastLockUIPosition = config:getLockUIPosition()
 	local lastFontSize = config:getFontSize()
+	local lastColorMode = config:getColorMode()
 
 	function TwitchClient:new()
 		local self = base.setmetatable({}, TwitchClient_mt)
@@ -106,8 +107,22 @@ local status, err = pcall(function()
 		self.server:addCommandHandler("CLEARCHAT", self.onClearChat)
 		self.server:addCommandHandler("CLEARMSG", self.onClearMsg)
 		self.server:addCommandHandler("USERNOTICE", self.onUserNotice)
+		self.server:addCommandHandler("GLOBALUSERSTATE", self.onGlobalUserState)
+		self.server:addCommandHandler("USERSTATE", self.onUserState)
 
 		self.ui:setCallbacks(self)
+	end
+
+	function TwitchClient.onGlobalUserState(cmd)
+		if cmd.color and cmd.color ~= "" then
+			client.broadcasterColor = cmd.color
+		end
+	end
+
+	function TwitchClient.onUserState(cmd)
+		if cmd.color and cmd.color ~= "" then
+			client.broadcasterColor = cmd.color
+		end
 	end
 
 	function TwitchClient.onClearChat()
@@ -147,25 +162,29 @@ local status, err = pcall(function()
 		end
 	end
 
-	function TwitchClient:getSkinForUser(user)
+	function TwitchClient:getSkinForUser(user, twitchColor)
 		if self.userSkins[user] then
 			return self.userSkins[user]
 		end
 
-		local colors = config:getMessageColors()
 		local skin = self.ui.skinFactory:getSkin()
-		local color = config:rgbToHex(colors[self.nextUserIndex])
+		local colorHex
 
-		skin.skinData.states.released[2].text.color = color
+		local colorMode = config:getColorMode()
+
+		if colorMode == "twitch" and twitchColor and twitchColor ~= "" and string.sub(twitchColor, 1, 1) == "#" then
+			local hex = string.sub(twitchColor, 2)
+			colorHex = "0x" .. hex .. "ff"
+		else
+			local colors = config:getMessageColors()
+			local randomIndex = math.random(1, #colors)
+			colorHex = config:rgbToHex(colors[randomIndex])
+		end
+
+		skin.skinData.states.released[2].text.color = colorHex
 		skin.skinData.states.released[2].text.fontSize = config:getFontSize()
 
 		self.userSkins[user] = skin
-		self.nextUserIndex = self.nextUserIndex + 1
-
-		if self.nextUserIndex > #colors then
-			self.nextUserIndex = 1
-		end
-
 		return skin
 	end
 
@@ -205,13 +224,9 @@ local status, err = pcall(function()
 		client.server:send("PRIVMSG #" .. auth.username .. " :" .. msg)
 		client:logChat("SENT", auth.username .. ": " .. msg)
 
-		local skin = client:getSkinForUser(auth.username)
+		local skin = client:getSkinForUser(auth.username, client.broadcasterColor)
 		local timestamp = config:getShowTimestamps() and client:getTimeStamp() .. " " or ""
-		local tag = ""
-
-		if config:getShowUserTags() then
-			tag = "[MOD] "
-		end
+		local tag = config:getShowUserTags() and "[MOD] " or ""
 
 		local prefix = timestamp .. tag .. auth.username .. ": "
 		client.ui:addMessage(prefix, prefix .. msg, skin)
@@ -234,7 +249,7 @@ local status, err = pcall(function()
 	function TwitchClient.onUserMessage(cmd)
 		client:addViewer(cmd.displayName)
 
-		local skin = client:getSkinForUser(cmd.displayName)
+		local skin = client:getSkinForUser(cmd.displayName, cmd.color)
 		local timestamp = config:getShowTimestamps() and client:getTimeStamp() .. " " or ""
 		local tag = ""
 
@@ -335,6 +350,17 @@ local status, err = pcall(function()
 					client.ui.lockUIPosition = lock
 					lastLockUIPosition = lock
 					client.ui:updateCursor()
+				end
+
+				local colorMode = config:getColorMode()
+				if colorMode ~= lastColorMode then
+					lastColorMode = colorMode
+					if client then
+						client.userSkins = {}
+						if client.ui then
+							client.ui:updateListM()
+						end
+					end
 				end
 
 				if client.ui then

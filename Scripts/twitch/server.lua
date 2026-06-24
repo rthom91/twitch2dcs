@@ -133,6 +133,7 @@ function Server:receive()
 					local displayName = ""
 					local isStaff, isModerator, isVIP, isSubscriber = false, false, false, false
 					local msgId, targetMsgId, systemMsg, msgIdType, bits = nil, nil, nil, nil, nil
+					local color = ""
 
 					if prefix then
 						user, userhost = string.match(prefix, "^([^!]+)!(.*)$")
@@ -147,6 +148,7 @@ function Server:receive()
 						targetMsgId = tags["target-msg-id"]
 						systemMsg = tags["system-msg"]
 						bits = tags["bits"]
+						color = tags["color"] or ""
 
 						if tags["badges"] then
 							for badge in string.gmatch(tags["badges"], "([^,]+)") do
@@ -188,7 +190,8 @@ function Server:receive()
 							msgIdType = msgIdType,
 							targetMsgId = targetMsgId,
 							systemMsg = systemMsg,
-							bits = bits
+							bits = bits,
+							color = color
 						})
 					end
 				end

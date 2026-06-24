@@ -9,11 +9,15 @@ return {
 	showUserTags = DbOption.new():setValue(true):checkbox(),
 	showTimestamps = DbOption.new():setValue(true):checkbox(),
 	showViewerCount = DbOption.new():setValue(true):checkbox(),
+	showRaids = DbOption.new():setValue(true):checkbox(),
 	showFollows = DbOption.new():setValue(true):checkbox(),
 	showSubscribers = DbOption.new():setValue(true):checkbox(),
 	showBits = DbOption.new():setValue(true):checkbox(),
 	showCharity = DbOption.new():setValue(true):checkbox(),
-	showRaids = DbOption.new():setValue(true):checkbox(),
+	colorSelection = DbOption.new():setValue("twitch"):combo({
+		DbOption.Item(_("Twitch")):Value("twitch"),
+		DbOption.Item(_("Palette")):Value("palette"),
+	}),
 	fontSize = DbOption.new():setValue(14):slider(DbOption.Range(10, 18)),
 	hideInactiveTimer = DbOption.new():setValue(0):combo({
 		DbOption.Item(_("Never")):Value(0),

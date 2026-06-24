@@ -36,23 +36,37 @@ function Config:rgbToHex(rgb)
 	return string.format("0x%02X%02X%02XFF", r, g, b)
 end
 
+function Config:getColorMode()
+	return self:getOption("colorSelection") or "twitch"
+end
+
 function Config:getMessageColors()
 	return {
-		{ r = 1.000, g = 0.200, b = 0.200 }, -- #FF3333 Bright Red
-		{ r = 1.000, g = 0.550, b = 0.000 }, -- #FF8C00 Orange
-		{ r = 1.000, g = 0.900, b = 0.000 }, -- #FFE500 Golden Yellow
-		{ r = 0.300, g = 1.000, b = 0.300 }, -- #4CFF4C Lime Green
-		{ r = 0.000, g = 1.000, b = 0.800 }, -- #00FFCC Turquoise
-		{ r = 0.000, g = 0.800, b = 1.000 }, -- #00CCFF Sky Blue
-		{ r = 0.200, g = 0.600, b = 1.000 }, -- #3399FF Bright Blue
-		{ r = 0.600, g = 0.400, b = 1.000 }, -- #9966FF Purple
-		{ r = 1.000, g = 0.300, b = 0.800 }, -- #FF4CCC Hot Pink
-		{ r = 1.000, g = 0.400, b = 0.600 }, -- #FF6699 Pink
-		{ r = 1.000, g = 0.700, b = 0.000 }, -- #FFB200 Amber
-		{ r = 0.400, g = 1.000, b = 0.400 }, -- #66FF66 Light Lime
-		{ r = 0.000, g = 1.000, b = 1.000 }, -- #00FFFF Pure Cyan
-		{ r = 0.800, g = 0.200, b = 1.000 }, -- #CC33FF Bright Violet
-		{ r = 1.000, g = 0.000, b = 0.500 }, -- #FF007F Deep Pink
+		{ r = 0.95, g = 0.35, b = 0.35 }, -- #F25A5A Soft Red
+		{ r = 0.98, g = 0.55, b = 0.30 }, -- #F98C4D Warm Orange
+		{ r = 0.95, g = 0.78, b = 0.25 }, -- #F2C640 Muted Gold
+		{ r = 0.45, g = 0.85, b = 0.45 }, -- #73D973 Soft Green
+		{ r = 0.25, g = 0.80, b = 0.75 }, -- #40CCC0 Teal
+		{ r = 0.35, g = 0.75, b = 0.95 }, -- #59BFF2 Sky Blue
+		{ r = 0.40, g = 0.65, b = 0.95 }, -- #66A6F2 Muted Blue
+		{ r = 0.65, g = 0.45, b = 0.95 }, -- #A673F2 Soft Purple
+		{ r = 0.92, g = 0.40, b = 0.70 }, -- #EB66B2 Muted Pink
+		{ r = 0.88, g = 0.50, b = 0.65 }, -- #E080A6 Dusty Rose
+		{ r = 0.90, g = 0.65, b = 0.35 }, -- #E6A65A Soft Amber
+		{ r = 0.55, g = 0.85, b = 0.55 }, -- #8CD98C Pale Green
+		{ r = 0.30, g = 0.82, b = 0.82 }, -- #4DD1D1 Soft Cyan
+		{ r = 0.70, g = 0.45, b = 0.90 }, -- #B273E6 Lavender Purple
+		{ r = 0.88, g = 0.30, b = 0.55 }, -- #E04C8C Deep Pink
+		{ r = 0.85, g = 0.55, b = 0.40 }, -- #D98C66 Terracotta
+		{ r = 0.40, g = 0.75, b = 0.65 }, -- #66BFA6 Sea Green
+		{ r = 0.75, g = 0.45, b = 0.75 }, -- #BF73BF Muted Magenta
+		{ r = 0.55, g = 0.80, b = 0.50 }, -- #8CCC80 Moss Green
+		{ r = 0.45, g = 0.60, b = 0.90 }, -- #7399E6 Steel Blue
+		{ r = 0.85, g = 0.70, b = 0.40 }, -- #D9B366 Khaki Gold
+		{ r = 0.60, g = 0.40, b = 0.85 }, -- #9966D9 Deep Lavender
+		{ r = 0.35, g = 0.85, b = 0.70 }, -- #59D9B3 Mint
+		{ r = 0.80, g = 0.50, b = 0.35 }, -- #CC8059 Warm Brown
+		{ r = 0.65, g = 0.55, b = 0.85 }, -- #A58CD9 Soft Violet
 	}
 end
 
