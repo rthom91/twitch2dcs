@@ -1,0 +1,29 @@
+# Logs
+Logs/Twitch2DCS.log
+*.log
+
+# Compiled Lua
+luac.out
+
+# Temporary / Editor
+*.tmp
+*.bak
+*.swp
+*~
+
+# DCS
+*.miz.bak
+*.trk
+
+# Visual Studio / IDE
+.vscode/
+.vs/
+*.suo
+*.user
+*.sln
+*.vcxproj*
+
+# LuaRocks / Build
+*.rock
+*.zip
+*.tar.gz
