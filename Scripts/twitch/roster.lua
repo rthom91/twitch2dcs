@@ -98,9 +98,14 @@ end
 
 function Roster:count()
 	local activeCount = 0
-	for _ in pairs(self.userNames) do
-		activeCount = activeCount + 1
+	local selfLogin = self.username or self.broadcasterKey
+
+	for key in pairs(self.userNames) do
+		if key ~= selfLogin and key ~= self.broadcasterKey then
+			activeCount = activeCount + 1
+		end
 	end
+
 	return activeCount
 end
 

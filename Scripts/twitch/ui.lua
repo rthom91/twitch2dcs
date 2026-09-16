@@ -718,7 +718,7 @@ end
 function UI:setTitle(viewerCount)
 	self.viewerCount = viewerCount or 0
 	if self._currentMode == modes.read or self._currentMode == modes.write then
-		if self.config:getShowViewerCount() and self.viewerCount > 0 then
+		if self.config:getShowViewerCount() then
 			self.window:setText(" Twitch (" .. self.viewerCount .. ")")
 		else
 			self.window:setText(" Twitch")
