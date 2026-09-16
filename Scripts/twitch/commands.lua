@@ -2,9 +2,12 @@ local base = _G
 
 module("twitch.commands")
 
+local require = base.require
 local string = base.string
 local table = base.table
 local pairs = base.pairs
+
+local Format = require("twitch.format")
 
 local Commands = {}
 
@@ -21,7 +24,7 @@ function Commands.handle(client, msg)
 		client.pendingClearRequest = false
 		client.clearRequestTime = nil
 		ui:clearChat()
-		ui:addMessage(">> [SYSTEM] ", ">> [SYSTEM] Chat cleared locally.", nil)
+		ui:addMessage(Format.systemMessage("Chat cleared locally."))
 		client:logChat("SYSTEM", "Chat cleared locally.")
 		return true
 	end
@@ -31,10 +34,10 @@ function Commands.handle(client, msg)
 			client.pendingClearRequest = false
 			client.clearRequestTime = nil
 			ui:clearChat()
-			ui:addMessage(">> [SYSTEM] ", ">> [SYSTEM] Chat cleared.", nil)
+			ui:addMessage(Format.systemMessage("Chat cleared."))
 			client:logChat("SYSTEM", "Chat clear request accepted.")
 		else
-			ui:addMessage(">> [SYSTEM] ", ">> [SYSTEM] No pending clear request.", nil)
+			ui:addMessage(Format.systemMessage("No pending clear request."))
 		end
 		return true
 	end
@@ -43,10 +46,10 @@ function Commands.handle(client, msg)
 		if client.pendingClearRequest then
 			client.pendingClearRequest = false
 			client.clearRequestTime = nil
-			ui:addMessage(">> [SYSTEM] ", ">> [SYSTEM] Clear request denied.", nil)
+			ui:addMessage(Format.systemMessage("Clear request denied."))
 			client:logChat("SYSTEM", "Chat clear request denied.")
 		else
-			ui:addMessage(">> [SYSTEM] ", ">> [SYSTEM] No pending clear request.", nil)
+			ui:addMessage(Format.systemMessage("No pending clear request."))
 		end
 		return true
 	end
@@ -54,15 +57,9 @@ function Commands.handle(client, msg)
 	if lower == "/listmods" then
 		local mods = {}
 
-		if client.activeMods then
-			for login, displayName in pairs(client.activeMods) do
-				table.insert(mods, displayName or login)
-			end
+		if client.roster and client.roster.listMods then
+			mods = client.roster:listMods()
 		end
-
-		table.sort(mods, function(a, b)
-			return string.lower(a) < string.lower(b)
-		end)
 
 		local list
 		if #mods == 0 then
@@ -71,7 +68,7 @@ function Commands.handle(client, msg)
 			list = table.concat(mods, ", ")
 		end
 
-		ui:addMessage(">> [SYSTEM] ", ">> [SYSTEM] Active moderators (" .. #mods .. "): " .. list, nil)
+		ui:addMessage(Format.systemMessage("Active moderators (" .. #mods .. "): " .. list))
 		return true
 	end
 
@@ -83,18 +80,18 @@ function Commands.handle(client, msg)
 		client.pendingClearRequest = false
 		client.clearRequestTime = nil
 		ui:setTitle(0)
-		ui:addMessage(">> [SYSTEM] ", ">> [SYSTEM] Connection disabled.", nil)
+		ui:addMessage(Format.systemMessage("Connection disabled."))
 		return true
 	end
 
 	if lower == "/connect" or lower == "/reconnect" then
 		if client.server and client.server.isConnected and session:isVerified() then
-			ui:addMessage(">> [SYSTEM] ", ">> [SYSTEM] Connection already established.", nil)
+			ui:addMessage(Format.systemMessage("Connection already established."))
 			return true
 		end
 
 		session:onManualConnect()
-		ui:addMessage(">> [SYSTEM] ", ">> [SYSTEM] Connecting to Twitch.", nil)
+		ui:addMessage(Format.systemMessage("Connecting to Twitch."))
 		client:connect()
 		return true
 	end

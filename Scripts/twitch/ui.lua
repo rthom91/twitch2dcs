@@ -19,7 +19,6 @@ local DialogLoader = require("DialogLoader")
 local EditBox = require("EditBox")
 local Input = require("Input")
 
-local Config = require("twitch.config")
 local tracer = require("twitch.tracer")
 local Sanitizer = require("twitch.sanitizer")
 
@@ -144,9 +143,9 @@ function UI:_applyTransparentSkin()
 	return skin
 end
 
-function UI:new()
+function UI:new(config)
 	local ui = base.setmetatable({}, UI_mt)
-	ui.config = Config:new()
+	ui.config = config
 
 	local position = ui.config:getPosition()
 	ui._x = position.x or 0

@@ -3,6 +3,9 @@ local base = _G
 module("twitch.session")
 
 local os = base.os
+local require = base.require
+
+local Format = require("twitch.format")
 
 local Session = {}
 local Session_mt = { __index = Session }
@@ -138,7 +141,7 @@ function Session:markVerified()
 	if realLogin ~= "" and configured ~= "" and realLogin ~= configured then
 		self.tracer:warn("Token account (" .. realLogin .. ") does not match configured username (" .. configured .. ")")
 		if client.ui then
-			client.ui:addMessage(">> [SYSTEM] ", ">> [SYSTEM] Token belongs to a different account (" .. realLogin .. "). Disconnecting.", nil)
+			client.ui:addMessage(Format.systemMessage("Token belongs to a different account (" .. realLogin .. "). Disconnecting."))
 			client.ui:setTitle(0)
 		end
 
@@ -162,7 +165,7 @@ function Session:markVerified()
 	end
 
 	if client.ui then
-		client.ui:addMessage(">> [SYSTEM] ", ">> [SYSTEM] Connected. Credentials verified.", nil)
+		client.ui:addMessage(Format.systemMessage("Connected. Credentials verified."))
 	end
 
 	self.credentialsVerified = true
@@ -193,7 +196,7 @@ function Session:tick(now)
 		if (auth.username or "") ~= (self.connectedUsername or "") or
 		   (auth.accessToken or "") ~= (self.connectedToken or "") then
 			if client.ui then
-				client.ui:addMessage(">> [SYSTEM] ", ">> [SYSTEM] Login credentials changed. Disconnecting.", nil)
+				client.ui:addMessage(Format.systemMessage("Login credentials changed. Disconnecting."))
 				client.ui:setTitle(0)
 			end
 			client.server:reset()
@@ -265,7 +268,7 @@ function Session:tick(now)
 				self.lastAuthFailureAttempt = now
 
 				if client.ui then
-					client.ui:addMessage(">> [SYSTEM] ", ">> [SYSTEM] Connection attempt (" .. self.authFailureAttempts .. "/3)", nil)
+					client.ui:addMessage(Format.systemMessage("Connection attempt (" .. self.authFailureAttempts .. "/3)"))
 				end
 				tracer:info("Recovery attempt " .. self.authFailureAttempts .. "/" .. self.AUTH_FAILURE_MAX_ATTEMPTS)
 
@@ -279,7 +282,7 @@ function Session:tick(now)
 				self.manualDisconnect = true
 
 				if client.ui then
-					client.ui:addMessage(">> [SYSTEM] ", ">> [SYSTEM] Authentication failed. Type /connect to retry.", nil)
+					client.ui:addMessage(Format.systemMessage("Authentication failed. Type /connect to retry."))
 				end
 				tracer:warn("Max recovery attempts reached.")
 			end
@@ -293,7 +296,7 @@ function Session:tick(now)
 				self.lastConnectionLostAttempt = now
 
 				if client.ui then
-					client.ui:addMessage(">> [SYSTEM] ", ">> [SYSTEM] Connection attempt (" .. self.connectionLostAttempts .. "/3)", nil)
+					client.ui:addMessage(Format.systemMessage("Connection attempt (" .. self.connectionLostAttempts .. "/3)"))
 				end
 				tracer:info("Recovery attempt " .. self.connectionLostAttempts .. "/" .. self.CONNECTION_LOST_MAX_ATTEMPTS)
 
@@ -306,7 +309,7 @@ function Session:tick(now)
 				self.manualDisconnect = true
 
 				if client.ui then
-					client.ui:addMessage(">> [SYSTEM] ", ">> [SYSTEM] Connection lost. Type /connect to retry.", nil)
+					client.ui:addMessage(Format.systemMessage("Connection lost. Type /connect to retry."))
 				end
 				tracer:warn("Max recovery attempts reached.")
 			end
@@ -321,7 +324,7 @@ function Session:tick(now)
 
 			if now - self.credentialsInvalidSince >= self.CREDENTIALS_CLEAR_DELAY then
 				if client.ui then
-					client.ui:addMessage(">> [SYSTEM] ", ">> [SYSTEM] Login credentials changed. Disconnecting.", nil)
+					client.ui:addMessage(Format.systemMessage("Login credentials changed. Disconnecting."))
 					client.ui:setTitle(0)
 				end
 				client.server:reset()
@@ -349,7 +352,7 @@ function Session:tick(now)
 
 		if now - self.credentialsRestoredSince >= 3 then
 			if client.ui then
-				client.ui:addMessage(">> [SYSTEM] ", ">> [SYSTEM] Login credentials entered. Connecting.", nil)
+				client.ui:addMessage(Format.systemMessage("Login credentials entered. Connecting."))
 			end
 			self.manualDisconnect = false
 			self.pendingCredentialReconnect = false
@@ -367,7 +370,7 @@ function Session:tick(now)
 			client.clearRequestTime = nil
 
 			if client.ui then
-				client.ui:addMessage(">> [SYSTEM] ", ">> [SYSTEM] Confirmation timed out.", nil)
+				client.ui:addMessage(Format.systemMessage("Confirmation timed out."))
 			end
 
 			client:logChat("SYSTEM", "Clear chat confirmation timed out.")

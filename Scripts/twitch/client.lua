@@ -16,6 +16,9 @@ local Server = require("twitch.server")
 local UI = require("twitch.ui")
 local Handlers = require("twitch.handlers")
 local Commands = require("twitch.commands")
+local Format = require("twitch.format")
+local Roster = require("twitch.roster")
+local Skins = require("twitch.skins")
 local lfs = require("lfs")
 
 local TwitchClient = {}
@@ -30,12 +33,8 @@ function TwitchClient:new(config, session, tracer)
 
 	self.server = Server:new()
 	self.ui = nil
-	self.userSkins = {}
-	self.userTwitchColors = {}
-	self.userNames = {}
-	self.userLastActive = {}
-	self.userDisplayNames = {}
-	self.broadcasterKey = nil
+	self.roster = Roster:new()
+	self.skins = nil
 	self.broadcasterColor = nil
 	self.lastViewerUpdate = os.time()
 	self.chatLog = nil
@@ -53,8 +52,6 @@ function TwitchClient:new(config, session, tracer)
 	self.clearRequestTime = nil
 
 	self._subgiftSuppress = {}
-	self.recentPaletteIndices = {}
-	self.activeMods = {}
 
 	local logDir = lfs.writedir() .. "Logs\\"
 	local fullPath = logDir .. "Twitch2DCS-chat-log.txt"
@@ -65,7 +62,7 @@ function TwitchClient:new(config, session, tracer)
 	end
 
 	local ok, uiErr = base.pcall(function()
-		self.ui = UI:new()
+		self.ui = UI:new(config)
 		self.ui.lockUIPosition = config:getLockUIPosition()
 	end)
 
@@ -74,13 +71,17 @@ function TwitchClient:new(config, session, tracer)
 		error("UI creation failed: " .. tostring(uiErr))
 	end
 
+	self.skins = Skins:new(config, self.ui)
+
 	Handlers.register(self.server, self, config, session, tracer)
 
 	self.ui:setCallbacks({
 		onUISendMessage = function(args) self:onUISendMessage(args) end,
 		onUIPositionChanged = function(args) self:onUIPositionChanged(args) end,
 		onUIColorModeChanged = function()
-			self.userSkins = {}
+			if self.skins then
+				self.skins:clearAssignedSkins()
+			end
 			if self.ui then
 				self.ui:refreshAllMessageSkins(function(login)
 					return self:getSkinForUser(login)
@@ -104,137 +105,36 @@ function TwitchClient:logChat(direction, line)
 end
 
 function TwitchClient:getSkinForUser(user, twitchColor)
-	user = (user or ""):lower()
-	if user == "" then
-		return self.ui.messageSkin
+	if not self.skins then
+		return self.ui and self.ui.messageSkin or nil
 	end
-
-	local colorMode = self.config:getColorMode()
-	local colorUpdated = false
-
-	if twitchColor and twitchColor ~= "" and string.sub(twitchColor, 1, 1) == "#" then
-		if self.userTwitchColors[user] ~= twitchColor then
-			self.userTwitchColors[user] = twitchColor
-			colorUpdated = true
-		end
-	end
-
-	local skin = self.userSkins[user]
-	local isNew = false
-	if not skin then
-		skin = self.ui.skinFactory:getSkin()
-		self.userSkins[user] = skin
-		isNew = true
-	end
-
-	local textState = skin.skinData.states.released[2].text
-	local colorHex = nil
-	local storedColor = self.userTwitchColors[user]
-
-	if colorMode == "twitch" and storedColor then
-		colorHex = "0x" .. string.sub(storedColor, 2) .. "ff"
-	elseif isNew then
-		local colors = self.config:getMessageColors()
-		local available = {}
-
-		for i = 1, #colors do
-			local usedRecently = false
-			for _, recent in ipairs(self.recentPaletteIndices) do
-				if recent == i then
-					usedRecently = true
-					break
-				end
-			end
-			if not usedRecently then
-				table.insert(available, i)
-			end
-		end
-
-		if #available == 0 then
-			for i = 1, #colors do
-				table.insert(available, i)
-			end
-		end
-
-		local chosenIndex = available[math.random(1, #available)]
-		colorHex = self.config:rgbToHex(colors[chosenIndex])
-
-		table.insert(self.recentPaletteIndices, chosenIndex)
-		if #self.recentPaletteIndices > 10 then
-			table.remove(self.recentPaletteIndices, 1)
-		end
-	end
-
-	if colorHex and textState.color ~= colorHex then
-		textState.color = colorHex
-		colorUpdated = true
-	end
-
-	textState.fontSize = self.ui.fontSize or self.config:getFontSize()
-
-	if colorUpdated and colorMode == "twitch" and not isNew and self.ui then
-		self.ui:updateListM(true)
-	end
-
-	return skin
+	return self.skins:getSkinForUser(user, twitchColor)
 end
 
 function TwitchClient:addViewer(displayName, userId, login, skipTitleUpdate)
-	login = (login or displayName or ""):lower()
-	if login == "" then return end
-
-	local key = login
-	local isNew = not self.userNames[key]
-
-	self.userNames[key] = true
-	self.userLastActive[key] = os.time()
-
-	if displayName and displayName ~= "" then
-		self.userDisplayNames[key] = displayName
-	elseif not self.userDisplayNames[key] then
-		self.userDisplayNames[key] = login
-	end
-
-	if isNew and not skipTitleUpdate then
+	if self.roster:addViewer(displayName, userId, login, skipTitleUpdate) then
 		self:updateTitle()
-	end
-
-	if self.username and key == self.username then
-		self.broadcasterKey = key
 	end
 end
 
 function TwitchClient:removeViewer(displayName, userId, login)
-	login = (login or displayName or ""):lower()
-	if login == "" then return end
-
-	local key = login
-
-	if self.userNames[key] then
-		self.userNames[key] = nil
-		self.userLastActive[key] = nil
-		self.userDisplayNames[key] = nil
-		self.userSkins[key] = nil
-
-		if self.broadcasterKey == key then
-			self.broadcasterKey = nil
+	if self.roster:removeViewer(displayName, userId, login) then
+		if self.skins and self.skins.userSkins then
+			local key = (login or displayName or ""):lower()
+			if key ~= "" then
+				self.skins.userSkins[key] = nil
+			end
 		end
-
 		self:updateTitle()
 	end
 end
 
 function TwitchClient:addModerator(login, displayName)
-	login = (login or ""):lower()
-	if login == "" then return end
-	if self.username and login == self.username then return end
-	self.activeMods[login] = displayName or login
+	self.roster:addModerator(login, displayName)
 end
 
 function TwitchClient:removeModerator(login)
-	login = (login or ""):lower()
-	if login == "" then return end
-	self.activeMods[login] = nil
+	self.roster:removeModerator(login)
 end
 
 function TwitchClient:onUISendMessage(args)
@@ -249,7 +149,7 @@ function TwitchClient:onUISendMessage(args)
 
 	if not session:isVerified() then
 		if self.ui then
-			self.ui:addMessage(">> [SYSTEM] ", ">> [SYSTEM] Not authenticated. No message sent.", nil)
+			self.ui:addMessage(Format.systemMessage("Not authenticated. No message sent."))
 		end
 		return
 	end
@@ -266,22 +166,14 @@ function TwitchClient:onUISendMessage(args)
 	end
 
 	local skin = self:getSkinForUser(channel, self.broadcasterColor)
-	local timestamp = config:getShowTimestamps() and self:getTimeStamp() .. " " or ""
+	local timestamp = config:getShowTimestamps() and self:getTimeStamp() or ""
+	local prefix = Format.userPrefix(config, timestamp, {
+		isStaff = self.isStaff,
+		isModerator = self.isModerator or session:isVerified(),
+		isVIP = self.isVIP,
+		isSubscriber = self.isSubscriber,
+	}, name)
 
-	local tag = ""
-	if config:getShowUserTags() then
-		if self.isStaff then
-			tag = "[STAFF] "
-		elseif self.isModerator or self.session:isVerified() then
-			tag = "[MOD] "
-		elseif self.isVIP then
-			tag = "[VIP] "
-		elseif self.isSubscriber then
-			tag = "[SUB] "
-		end
-	end
-
-	local prefix = timestamp .. tag .. name .. ": "
 	self.ui:addMessage(prefix, prefix .. displayMsg, skin, nil, channel)
 end
 
@@ -296,11 +188,7 @@ function TwitchClient:updateTitle()
 	end
 
 	if self.config:getShowViewerCount() then
-		local activeCount = 0
-		for _ in pairs(self.userNames) do
-			activeCount = activeCount + 1
-		end
-		self.ui:setTitle(activeCount)
+		self.ui:setTitle(self.roster:count())
 	else
 		self.ui:setTitle(0)
 	end
@@ -316,12 +204,6 @@ function TwitchClient:connect()
 	self.username = string.lower(auth.username or "")
 	self.authenticatedDisplayName = nil
 	self.authenticatedLogin = nil
-	self.userNames = {}
-	self.userLastActive = {}
-	self.userDisplayNames = {}
-	self.userSkins = {}
-	self.userTwitchColors = {}
-	self.broadcasterKey = nil
 	self.broadcasterColor = nil
 	self.isStaff = false
 	self.isModerator = false
@@ -330,8 +212,12 @@ function TwitchClient:connect()
 	self.pendingClearRequest = false
 	self.clearRequestTime = nil
 	self._subgiftSuppress = {}
-	self.recentPaletteIndices = {}
-	self.activeMods = {}
+
+	self.roster:reset()
+	self.roster:setUsername(self.username)
+	if self.skins then
+		self.skins:reset()
+	end
 
 	self.session:onConnectStart()
 	self.server:connect(auth)

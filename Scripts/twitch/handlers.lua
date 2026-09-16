@@ -3,8 +3,11 @@ local base = _G
 module("twitch.handlers")
 
 local os = base.os
+local require = base.require
 local string = base.string
 local tonumber = base.tonumber
+
+local Format = require("twitch.format")
 
 local Handlers = {}
 
@@ -54,37 +57,10 @@ function Handlers.register(server, client, config, session, tracer)
 		end
 
 		local skin = client:getSkinForUser(cmd.user, cmd.color)
-		local timestamp = config:getShowTimestamps() and client:getTimeStamp() .. " " or ""
-		local tag = ""
+		local timestamp = config:getShowTimestamps() and client:getTimeStamp() or ""
+		local prefix = Format.userPrefix(config, timestamp, cmd, cmd.displayName)
+		local messageText = Format.rewriteCheerMessage(cmd.param2 or "", cmd.bits, config:getShowBits())
 
-		if config:getShowUserTags() then
-			if cmd.isStaff then tag = "[STAFF] "
-			elseif cmd.isModerator then tag = "[MOD] "
-			elseif cmd.isVIP then tag = "[VIP] "
-			elseif cmd.isSubscriber then tag = "[SUB] "
-			end
-		end
-
-		local messageText = cmd.param2 or ""
-
-		if cmd.bits and tonumber(cmd.bits) and config:getShowBits() then
-			local bitsAmount = tonumber(cmd.bits)
-			local bitWord = (bitsAmount == 1) and "bit" or "bits"
-			local cheerNote = string.format("[Cheered with %d %s]", bitsAmount, bitWord)
-
-			messageText = messageText:gsub("^[Cc]heer%d+%s*", "")
-			messageText = messageText:gsub("%s*[Cc]heer%d+%s*", " ")
-			messageText = messageText:gsub("^%s+", "")
-			messageText = messageText:gsub("%s+$", "")
-
-			if messageText == "" then
-				messageText = cheerNote
-			else
-				messageText = cheerNote .. " " .. messageText
-			end
-		end
-
-		local prefix = timestamp .. tag .. cmd.displayName .. ": "
 		client.ui:addMessage(prefix, prefix .. messageText, skin, cmd.msgId, cmd.user)
 		client:logChat("RECEIVE", cmd.displayName .. ": " .. messageText)
 	end)
@@ -137,7 +113,7 @@ function Handlers.register(server, client, config, session, tracer)
 		client:logChat("SYSTEM", "Moderator requested to clear chat.")
 
 		if client.ui then
-			client.ui:addMessage(">> [SYSTEM] ", ">> [SYSTEM] Moderator requested to clear chat. Type /yes or /no", nil)
+			client.ui:addMessage(Format.systemMessage("Moderator requested to clear chat. Type /yes or /no"))
 		end
 	end)
 
@@ -202,14 +178,7 @@ function Handlers.register(server, client, config, session, tracer)
 
 			client._subgiftSuppress[gifterKey] = count
 
-			local finalMsg
-			if count <= 1 then
-				finalMsg = gifter .. " has gifted a sub to the community."
-			else
-				finalMsg = gifter .. " has gifted " .. count .. " subs to the community."
-			end
-
-			client.ui:addMessage(">> [NOTIF] ", ">> [NOTIF] " .. finalMsg, nil)
+			client.ui:addMessage(Format.notifMessage(Format.mysteryGiftMessage(gifter, count)))
 			return
 		end
 
@@ -224,23 +193,11 @@ function Handlers.register(server, client, config, session, tracer)
 				return
 			end
 
-			local recipient = cmd.recipientDisplayName
-			if not recipient or recipient == "" then
-				recipient = cmd.recipientName
-			end
-
-			local finalMsg
-			if recipient and recipient ~= "" then
-				finalMsg = gifter .. " has gifted a sub to " .. recipient .. "."
-			else
-				finalMsg = gifter .. " has gifted a sub."
-			end
-
-			client.ui:addMessage(">> [NOTIF] ", ">> [NOTIF] " .. finalMsg, nil)
+			client.ui:addMessage(Format.notifMessage(Format.subGiftMessage(gifter, cmd.recipientDisplayName, cmd.recipientName)))
 			return
 		end
 
-		client.ui:addMessage(">> [NOTIF] ", ">> [NOTIF] " .. msg, nil)
+		client.ui:addMessage(Format.notifMessage(msg))
 	end)
 
 	server:addCommandHandler("GLOBALUSERSTATE", function(cmd)
