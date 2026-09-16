@@ -139,9 +139,21 @@ function Session:markVerified()
 		self.tracer:warn("Token account (" .. realLogin .. ") does not match configured username (" .. configured .. ")")
 		if client.ui then
 			client.ui:addMessage(">> [SYSTEM] ", ">> [SYSTEM] Token belongs to a different account (" .. realLogin .. "). Disconnecting.", nil)
+			client.ui:setTitle(0)
 		end
-		client.server:reset()
-		self:onAuthFailed()
+
+		if client.server then
+			client.server:reset()
+		end
+
+		self.manualDisconnect = true
+		self.authFailureRecovery = false
+		self.connectionLostRecovery = false
+		self.pendingCredentialReconnect = false
+		self.credentialsVerified = false
+		self.authPending = false
+		self.connectedUsername = nil
+		self.connectedToken = nil
 		return
 	end
 
@@ -239,7 +251,10 @@ function Session:tick(now)
 		end
 	end
 
-	if client.server and client.server.isConnected and client.authenticatedDisplayName then
+	if client.server and client.server.isConnected
+		and not self.credentialsVerified
+		and ((client.authenticatedLogin and client.authenticatedLogin ~= "")
+			or (client.authenticatedDisplayName and client.authenticatedDisplayName ~= "")) then
 		self:markVerified()
 	end
 

@@ -8,7 +8,41 @@ local tonumber = base.tonumber
 
 local Handlers = {}
 
+local function isAuthFailureNotice(cmd)
+	local msg = (cmd.param2 or ""):lower()
+	local msgId = (cmd.msgIdType or ""):lower()
+
+	if msgId == "login_unsuccessful"
+		or msgId == "login_failure"
+		or msgId == "authentication_failed"
+		or msgId:find("login", 1, true) then
+		return true
+	end
+
+	if string.find(msg, "login authentication failed", 1, true)
+		or string.find(msg, "improperly formatted auth", 1, true)
+		or string.find(msg, "authentication failed", 1, true) then
+		return true
+	end
+
+	return false
+end
+
+local function setAuthenticatedLogin(client, login)
+	login = (login or ""):lower()
+	if login == "" or login == "tmi.twitch.tv" then
+		return false
+	end
+
+	client.authenticatedLogin = login
+	return true
+end
+
 function Handlers.register(server, client, config, session, tracer)
+	server:addCommandHandler("001", function(cmd)
+		setAuthenticatedLogin(client, cmd.param1)
+	end)
+
 	server:addCommandHandler("PRIVMSG", function(cmd)
 		client:addViewer(cmd.displayName, cmd.userId, cmd.user)
 
@@ -65,21 +99,6 @@ function Handlers.register(server, client, config, session, tracer)
 			end
 		end
 
-		if cmd.user and cmd.user ~= "" then
-			local expected = (client.username or ""):lower()
-			local login = cmd.user:lower()
-
-			if expected ~= "" and login == expected then
-				client.authenticatedLogin = login
-
-				if client.session then
-					client.session:markVerified()
-				end
-			elseif not client.authenticatedLogin then
-				client.authenticatedLogin = login
-			end
-		end
-
 		client:logChat("RECEIVE", (cmd.displayName or cmd.user) .. " joined.")
 	end)
 
@@ -131,7 +150,7 @@ function Handlers.register(server, client, config, session, tracer)
 	server:addCommandHandler("USERNOTICE", function(cmd)
 		if not cmd.systemMsg then return end
 
-		local msg = cmd.systemMsg:gsub("\\s", " ")
+		local msg = cmd.systemMsg
 		local msgIdType = cmd.msgIdType or ""
 
 		local showMap = {
@@ -238,6 +257,10 @@ function Handlers.register(server, client, config, session, tracer)
 		client.isVIP = cmd.isVIP or false
 		client.isSubscriber = cmd.isSubscriber or false
 
+		if cmd.login and cmd.login ~= "" then
+			setAuthenticatedLogin(client, cmd.login)
+		end
+
 		if client.session then
 			client.session:markVerified()
 		end
@@ -248,33 +271,40 @@ function Handlers.register(server, client, config, session, tracer)
 			client.broadcasterColor = cmd.color
 		end
 
-		if cmd.displayName and cmd.displayName ~= "" then
-			if client.username and (
-				(cmd.user and cmd.user:lower() == client.username) or
-				(cmd.displayName:lower() == client.username)
-			) then
-				client.authenticatedDisplayName = cmd.displayName
-			end
+		local stateLogin = (cmd.login or cmd.user or ""):lower()
+		local expected = (client.username or ""):lower()
+		local display = (cmd.displayName or ""):lower()
+		local isSelf = (expected ~= "" and (
+			stateLogin == expected or
+			(display ~= "" and display == expected)
+		))
+
+		if cmd.displayName and cmd.displayName ~= "" and isSelf then
+			client.authenticatedDisplayName = cmd.displayName
 		end
 
-		if client.username and (
-			(cmd.user and cmd.user:lower() == client.username) or
-			(cmd.displayName and cmd.displayName:lower() == client.username)
-		) then
+		if isSelf then
+			if stateLogin ~= "" then
+				setAuthenticatedLogin(client, stateLogin)
+			end
 			client.isStaff = cmd.isStaff or client.isStaff
 			client.isModerator = cmd.isModerator or client.isModerator
 			client.isVIP = cmd.isVIP or client.isVIP
 			client.isSubscriber = cmd.isSubscriber or client.isSubscriber
+
+			if client.session then
+				client.session:markVerified()
+			end
 		end
 	end)
 
 	server:addCommandHandler("NOTICE", function(cmd)
-		local msg = (cmd.param2 or ""):lower()
-		if string.find(msg, "login authentication failed") or string.find(msg, "authentication failed") then
+		if isAuthFailureNotice(cmd) then
 			if client.server then
 				client.server:reset()
 			end
 			session:onAuthFailed()
+			return
 		end
 	end)
 
