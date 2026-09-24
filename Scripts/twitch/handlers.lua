@@ -176,7 +176,9 @@ function Handlers.register(server, client, config, session, tracer)
 		if msgIdType == "submysterygift" then
 			local count = tonumber(cmd.massGiftCount) or 1
 
-			client._subgiftSuppress[gifterKey] = count
+			if count > 3 then
+				client._subgiftSuppress[gifterKey] = count
+			end
 
 			client.ui:addMessage(Format.notifMessage(Format.mysteryGiftMessage(gifter, count)))
 			return
