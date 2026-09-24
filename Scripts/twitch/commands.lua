@@ -27,7 +27,6 @@ function Commands.handle(client, msg)
 		client.pendingClearRequest = false
 		client.clearRequestTime = nil
 		ui:clearChat()
-		ui:addMessage(Format.systemMessage("Chat cleared locally."))
 		client:logChat("SYSTEM", "Chat cleared locally.")
 		return true
 	end
@@ -37,7 +36,6 @@ function Commands.handle(client, msg)
 			client.pendingClearRequest = false
 			client.clearRequestTime = nil
 			ui:clearChat()
-			ui:addMessage(Format.systemMessage("Chat cleared."))
 			client:logChat("SYSTEM", "Chat clear request accepted.")
 		else
 			ui:addMessage(Format.systemMessage("No pending clear request."))
@@ -49,7 +47,6 @@ function Commands.handle(client, msg)
 		if client.pendingClearRequest then
 			client.pendingClearRequest = false
 			client.clearRequestTime = nil
-			ui:addMessage(Format.systemMessage("Clear request denied."))
 			client:logChat("SYSTEM", "Chat clear request denied.")
 		else
 			ui:addMessage(Format.systemMessage("No pending clear request."))

@@ -31,5 +31,5 @@ cdata = {
 	TWITCH2DCS_CMDHINT_1 = _("Active moderators: /listmods"),
 	TWITCH2DCS_CMDHINT_2 = _("Download latest: /update"),
 	TWITCH2DCS_CMDHINT_3 = _("Connection: /connect, /reconnect, /disconnect"),
-	TWITCH2DCS_CMDHINT_4 = _("Wipe chat: /clear"),
+	TWITCH2DCS_CMDHINT_4 = _("Wipe chat (locally): /clear"),
 }
