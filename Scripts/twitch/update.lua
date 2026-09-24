@@ -13,7 +13,7 @@ local pcall = base.pcall
 local Format = require("twitch.format")
 local lfs = require("lfs")
 
-local CURRENT_VERSION = "2.2.0"
+local CURRENT_VERSION = "2.2.1"
 local RELEASES_URL = "https://api.github.com/repos/rthom91/twitch2dcs/releases/latest"
 local CHECK_DELAY = 10
 

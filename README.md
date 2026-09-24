@@ -16,6 +16,7 @@ For content creators of DCS World who fly in VR to interact with their audience 
 * Basic emoji support
 * Mouse wheel scrolling
 * Clearable chat messages
+* Self-update checker
 * Separate Mod/Chat logging
 
 ### Limitations
@@ -32,8 +33,9 @@ For content creators of DCS World who fly in VR to interact with their audience 
 
 ### Commands
 * Active moderators = /listmods
-* Connection overrides = /connect or /reconnect or /disconnect
-* Wipe entire chat history (locally) = /clear
+* Download latest = /update
+* Connection = /connect, /reconnect, /disconnect
+* Wipe chat (locally) = /clear
 
 ### Links
 * DCS Files - https://www.digitalcombatsimulator.com/en/files/3350538

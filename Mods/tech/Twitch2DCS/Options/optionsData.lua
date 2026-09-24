@@ -1,6 +1,6 @@
 cdata = {
 	TWITCH2DCS_OPTIONS_TITLE = _("T w i t c h 2 D C S"),
-	TWITCH2DCS_OPTIONS_VERSION = _("Version 2.2.0 / DCS 2.9.29+"),
+	TWITCH2DCS_OPTIONS_VERSION = _("Version 2.2.1 / DCS 2.9.29+"),
 	TWITCH2DCS_ENABLE_TEXT = _("Enable"),
 	TWITCH2DCS_LOCKUIPOSITION = _("Lock position"),
 	TWITCH2DCS_SHOW_UPDATES = _("Show updates"),
