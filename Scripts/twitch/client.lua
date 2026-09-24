@@ -19,6 +19,7 @@ local Commands = require("twitch.commands")
 local Format = require("twitch.format")
 local Roster = require("twitch.roster")
 local Skins = require("twitch.skins")
+local Update = require("twitch.update")
 local lfs = require("lfs")
 
 local TwitchClient = {}
@@ -38,6 +39,7 @@ function TwitchClient:new(config, session, tracer)
 	self.broadcasterColor = nil
 	self.lastViewerUpdate = os.time()
 	self.chatLog = nil
+	self.update = nil
 
 	self.username = nil
 	self.authenticatedDisplayName = nil
@@ -72,6 +74,7 @@ function TwitchClient:new(config, session, tracer)
 	end
 
 	self.skins = Skins:new(config, self.ui)
+	self.update = Update:new(self, tracer)
 
 	Handlers.register(self.server, self, config, session, tracer)
 

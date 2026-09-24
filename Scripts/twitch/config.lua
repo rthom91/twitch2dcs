@@ -61,6 +61,14 @@ function Config:formatAccessToken(token)
 	return token
 end
 
+function Config:getShowUpdates()
+	local value = self:getOption("showUpdates")
+	if value == nil then
+		return true
+	end
+	return value
+end
+
 -- Main
 function Config:isEnabled() return self:getOption("isEnabled") end
 function Config:getFontSize() return self:getOption("fontSize") end

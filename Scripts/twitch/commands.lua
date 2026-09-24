@@ -2,12 +2,15 @@ local base = _G
 
 module("twitch.commands")
 
+local os = base.os
 local require = base.require
 local string = base.string
 local table = base.table
 local pairs = base.pairs
 
 local Format = require("twitch.format")
+
+local UPDATE_URL = "https://github.com/rthom91/twitch2dcs/releases/latest"
 
 local Commands = {}
 
@@ -93,6 +96,24 @@ function Commands.handle(client, msg)
 		session:onManualConnect()
 		ui:addMessage(Format.systemMessage("Connecting to Twitch."))
 		client:connect()
+		return true
+	end
+
+	if lower == "/update" then
+		local opened = false
+
+		if os.execute then
+			os.execute('cmd /C start "" "' .. UPDATE_URL .. '"')
+			opened = true
+		end
+
+		if opened then
+			ui:addMessage(Format.systemMessage("Opening download page."))
+		else
+			ui:addMessage(Format.systemMessage("Could not open browser."))
+		end
+
+		client:logChat("SYSTEM", "Update page requested.")
 		return true
 	end
 

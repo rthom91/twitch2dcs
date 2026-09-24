@@ -3,6 +3,7 @@ cdata = {
 	TWITCH2DCS_OPTIONS_VERSION = _("Version 2.2.0 / DCS 2.9.29+"),
 	TWITCH2DCS_ENABLE_TEXT = _("Enable"),
 	TWITCH2DCS_LOCKUIPOSITION = _("Lock position"),
+	TWITCH2DCS_SHOW_UPDATES = _("Show updates"),
 	TWITCH2DCS_USERNAME = _("Channel / Username"),
 	TWITCH2DCS_OAUTH = _("Access Token"),
 	TWITCH2DCS_CLIENTID = _("Client ID"),
@@ -28,6 +29,7 @@ cdata = {
 	TWITCH2DCS_SETUPHINT_6 = _("NOTE: Clear edit box then fill to trigger reconnect"),
 	TWITCH2DCS_CMDHINT = _("Commands"),
 	TWITCH2DCS_CMDHINT_1 = _("Active moderators: /listmods"),
-	TWITCH2DCS_CMDHINT_2 = _("Connection: /connect, /reconnect, /disconnect"),
-	TWITCH2DCS_CMDHINT_3 = _("Wipe chat: /clear"),
+	TWITCH2DCS_CMDHINT_2 = _("Download latest: /update"),
+	TWITCH2DCS_CMDHINT_3 = _("Connection: /connect, /reconnect, /disconnect"),
+	TWITCH2DCS_CMDHINT_4 = _("Wipe chat: /clear"),
 }

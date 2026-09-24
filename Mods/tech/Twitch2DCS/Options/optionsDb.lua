@@ -3,6 +3,7 @@ local DbOption = require("Options.DbOption")
 return {
 	isEnabled = DbOption.new():setValue(true):checkbox(),
 	lockUIPosition = DbOption.new():setValue(false):checkbox(),
+	showUpdates = DbOption.new():setValue(true):checkbox(),
 	username = DbOption.new():setValue(""):editbox(),
 	oauth = DbOption.new():setValue(""):editbox(),
 	clientId = DbOption.new():setValue(""):editbox(),

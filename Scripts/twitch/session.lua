@@ -189,6 +189,10 @@ function Session:tick(now)
 	local config = self.config
 	local tracer = self.tracer
 
+	if client.update then
+		client.update:tick(now)
+	end
+
 	self.cachedCanLogin = self:canLogin()
 
 	if self.credentialsVerified and client.server and client.server.isConnected then

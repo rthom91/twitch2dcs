@@ -109,6 +109,29 @@ dialog = {
 					},
 					["type"] = "CheckBox",
 				},
+				["showUpdatesCheckbox"] = {
+					["params"] = {
+						["bounds"] = {
+							["h"] = 20,
+							["w"] = 110,
+							["x"] = 835,
+							["y"] = 85,
+						},
+						["enabled"] = true,
+						["state"] = true,
+						["tabOrder"] = 0,
+						["text"] = "$TWITCH2DCS_SHOW_UPDATES",
+						["tooltip"] = "Check for Twitch2DCS updates on launch",
+						["visible"] = true,
+						["zindex"] = 0,
+					},
+					["skin"] = {
+						["params"] = {
+							["name"] = "checkBoxSkin_options",
+						},
+					},
+					["type"] = "CheckBox",
+				},
 				["usernameLabel"] = {
 					["params"] = {
 						["bounds"] = {
@@ -992,6 +1015,27 @@ dialog = {
 						},
 						["enabled"] = true,
 						["text"] = "$TWITCH2DCS_CMDHINT_3",
+						["tooltip"] = "",
+						["visible"] = true,
+						["zindex"] = 0,
+					},
+					["skin"] = {
+						["params"] = {
+							["name"] = "staticOptionsCommentSkin",
+						},
+					},
+					["type"] = "Static",
+				},
+				["commandHint4"] = {
+					["params"] = {
+						["bounds"] = {
+							["h"] = 15,
+							["w"] = 300,
+							["x"] = 600,
+							["y"] = 540,
+						},
+						["enabled"] = true,
+						["text"] = "$TWITCH2DCS_CMDHINT_4",
 						["tooltip"] = "",
 						["visible"] = true,
 						["zindex"] = 0,
